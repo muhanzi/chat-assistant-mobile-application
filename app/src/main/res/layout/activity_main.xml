@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.example.dell.newproject2.MainActivity">
+
+
+    <Button
+        android:id="@+id/butt1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="49dp"
+        android:text="send message to whatsapp" />
+
+    <Button
+        android:id="@+id/butt2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignEnd="@+id/butt5"
+        android:layout_below="@+id/butt1"
+        android:layout_marginTop="13dp"
+        android:text="send sms" />
+
+    <Button
+        android:id="@+id/butt3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignEnd="@+id/butt2"
+        android:layout_below="@+id/butt2"
+        android:layout_marginTop="15dp"
+        android:text="use voice" />
+
+    <Button
+        android:id="@+id/butt4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:text="say the text" />
+
+    <Button
+        android:id="@+id/butt5"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/butt4"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="16dp"
+        android:text="Trying" />
+
+    <Button
+        android:id="@+id/butt6"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/butt5"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="68dp"
+        android:text="start now" />
+
+</RelativeLayout>
