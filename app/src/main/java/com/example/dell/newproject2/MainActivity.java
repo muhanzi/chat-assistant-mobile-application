@@ -232,7 +232,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         }
     };
 
-    private BroadcastReceiver broadcastReceiver_for_charger_unplugged =new BroadcastReceiver() {
+    public BroadcastReceiver broadcastReceiver_for_charger_unplugged =new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
