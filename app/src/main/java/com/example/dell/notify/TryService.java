@@ -1,4 +1,4 @@
-package com.example.dell.newproject2;
+package com.example.dell.notify;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -62,7 +62,7 @@ public class TryService extends Service {
         this.startForeground(NOTIF_ID, new NotificationCompat.Builder(this,  //!!! I changed this ---> startForeground(NOTIF_ID, new NotificationCompat.Builder(this,
                 NOTIF_CHANNEL_ID)
                 .setOngoing(true)
-                .setSmallIcon(R.drawable.notif_icon)
+                .setSmallIcon(R.drawable.notify_icon)
                 .setContentTitle(getString(R.string.app_name))
                 .setContentText("TryService is running in the background")
                 .setContentIntent(pendingIntent)
@@ -88,7 +88,7 @@ public class TryService extends Service {
 
     private void show_notification_after_one_minute(){
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, NOTIF_CHANNEL_ID2)
-                .setSmallIcon(R.drawable.notif_icon)
+                .setSmallIcon(R.drawable.notify_icon)
                 .setContentTitle("Notification to repeat")
                 .setContentText("TryService is working well")
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT);

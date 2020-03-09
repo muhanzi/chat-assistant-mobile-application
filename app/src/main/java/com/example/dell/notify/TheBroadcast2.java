@@ -1,4 +1,4 @@
-package com.example.dell.newproject2;
+package com.example.dell.notify;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -8,7 +8,7 @@ import android.content.Intent;
  * Created by DELL on 1/18/2020.
  */
 
-public class TheBroadcast3 extends BroadcastReceiver{
+public class TheBroadcast2 extends BroadcastReceiver{
     @Override
     public void onReceive(Context context, Intent intent) {
 //        Toast.makeText(context,"broadcast is working",Toast.LENGTH_LONG).show();

@@ -1,4 +1,4 @@
-package com.example.dell.newproject2;
+package com.example.dell.notify;
 
 import org.junit.Test;
 

@@ -1,8 +1,11 @@
-package com.example.dell.newproject2;
+package com.example.dell.notify;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
@@ -10,11 +13,12 @@ import android.util.Log;
 
 public class ServiceWithAlarmManager extends Service {
     Context context;
-
+    public static final String NOTIF_CHANNEL_ID="channel5";
     @Override
     public void onCreate() {
         super.onCreate();
         context = getApplicationContext();
+        createNotificationChannel();
     }
 
     public ServiceWithAlarmManager() {
@@ -40,9 +44,26 @@ public class ServiceWithAlarmManager extends Service {
 
     }
 
+    private void createNotificationChannel() {
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = getString(R.string.channel_name5);
+            String description = getString(R.string.channel_description);
+            int importance = NotificationManager.IMPORTANCE_LOW;
+            NotificationChannel channel = new NotificationChannel(NOTIF_CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+            channel.setSound(null,null);
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
+    }
+
     private void show_notification(){
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "1") // channel4
-                .setSmallIcon(R.drawable.notif_icon)
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context,NOTIF_CHANNEL_ID) // channel4
+                .setSmallIcon(R.drawable.notify_icon)
                 .setContentTitle("Message from ServiceWithAlarmManager")
                 .setContentText("Notification shown")
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT);

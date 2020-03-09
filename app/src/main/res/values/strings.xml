@@ -1,9 +1,11 @@
 <resources>
-    <string name="app_name">NewProject2</string>
+    <string name="app_name">Notify</string>
+    <string name="project_color_code">#15D671</string>
     <string name="channel_name">Notification channel 1</string>
     <string name="channel_description">display notification</string>
     <string name="channel_name2">Notification channel 2</string>
     <string name="channel_name3">Notification channel 3</string>
     <string name="channel_name4">Notification channel 4</string>
+    <string name="channel_name5">Notification channel 5</string>
     <string name="channel_description2">channel for displaying notification of the foregroundservice</string>
 </resources>

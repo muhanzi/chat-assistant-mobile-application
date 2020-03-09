@@ -1,9 +1,8 @@
-package com.example.dell.newproject2;
+package com.example.dell.notify;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.widget.Toast;
 
 /**
  * Created by DELL on 11/17/2019.

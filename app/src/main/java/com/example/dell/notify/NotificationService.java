@@ -1,4 +1,4 @@
-package com.example.dell.newproject2;
+package com.example.dell.notify;
 
 /**
  * Created by DELL on 12/27/2019.
@@ -15,12 +15,16 @@ import android.os.Build;
 import android.os.Bundle;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
+import android.speech.tts.TextToSpeech;
 import android.support.v4.app.NotificationCompat;
-import android.util.Log;
+import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
+import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+import java.util.Locale;
 
 
 public class NotificationService extends NotificationListenerService {
@@ -30,14 +34,15 @@ public class NotificationService extends NotificationListenerService {
     //
     private static final int NOTIF_ID = 1;
     private static final String NOTIF_CHANNEL_ID = "channel2";
+    private TextToSpeech textToSpeech;
 
     @Override
     public void onCreate() {
-
         super.onCreate();
+        textToSpeech = initializeTextToSpeech();
         context = getApplicationContext();
         createNotificationChannel();
-        startforeground();// try
+        startforeground();
     }
 
     @Override
@@ -45,12 +50,8 @@ public class NotificationService extends NotificationListenerService {
         if(!STATUS_BAR_READ_ONCE){
             readActiveNotifications();
             return;
-            // put a delay here // before the app continues with onNotificationPosted()
         }
-        String pack = sbn.getPackageName();
-        if(pack.equals("android")){
-            return;
-        }
+        String packageName = sbn.getPackageName();
         String ticker ="";
         if(sbn.getNotification().tickerText !=null) {
             ticker = sbn.getNotification().tickerText.toString();
@@ -61,9 +62,6 @@ public class NotificationService extends NotificationListenerService {
         if(extras.getString("android.title") != null && extras.getCharSequence("android.text") != null){
             title = extras.getString("android.title");
             text = extras.getCharSequence("android.text").toString();
-            if(title.equals("Notification to repeat") || title.equals("Message from ServiceWithAlarmManager")){
-                return;
-            }
         }else{
             // title or text is empty
             return;
@@ -72,14 +70,8 @@ public class NotificationService extends NotificationListenerService {
         int id1 = extras.getInt(Notification.EXTRA_SMALL_ICON);
         Bitmap id = sbn.getNotification().largeIcon;
 
-
-//        Log.i("Package",pack);
-//        Log.i("Ticker",ticker);
-//        Log.i("Title",title);
-//        Log.i("Text",text);
-
         Intent msgrcv = new Intent("Msg"); // action --> "Msg"
-        msgrcv.putExtra("package", pack);
+        msgrcv.putExtra("package", packageName);
         msgrcv.putExtra("ticker", ticker);
         msgrcv.putExtra("title", title);
         msgrcv.putExtra("text", text);
@@ -88,6 +80,9 @@ public class NotificationService extends NotificationListenerService {
             id.compress(Bitmap.CompressFormat.PNG, 100, stream);
             byte[] byteArray = stream.toByteArray();
             msgrcv.putExtra("icon",byteArray);
+        }
+        if(packageName.equals("android") || packageName.equals("com.example.dell.notify")){
+            return;
         }
         LocalBroadcastManager.getInstance(context).sendBroadcast(msgrcv);
     }
@@ -104,18 +99,12 @@ public class NotificationService extends NotificationListenerService {
     }
 
     private void readActiveNotifications() {
-        // read all active notifications // !!!!!!!!!!!!!!!!  from this app  // most of the time it is just one
-        StatusBarNotification[] sbn= NotificationService.this.getActiveNotifications();  // will be null because notification listener is not yet connected
+        // read all active notifications from this app on the status bar // and from others apps
+        StatusBarNotification[] sbn= NotificationService.this.getActiveNotifications();  // may be null in case this app has not yet posted any notification on the status bar
         //
         ArrayList<String> all=new ArrayList<>();
         for(StatusBarNotification noti : sbn){
-            String pack = noti.getPackageName();
-            /*
-            String ticker ="";
-            if(noti.getNotification().tickerText !=null) {
-                ticker = noti.getNotification().tickerText.toString();
-            }
-            */
+            String packageName = noti.getPackageName();
             Bundle extras = noti.getNotification().extras;
             String title = extras.getString("android.title");
             String text;
@@ -124,6 +113,11 @@ public class NotificationService extends NotificationListenerService {
             }else{
                 text="text is empty";
             }
+            //
+            //function to say the text // text to speech
+            //say_the_text("New Message: Notify is now running in the background tap for more options");
+            say_the_text("New Message from Notify app: "+text);
+            //
             all.add(title+" it says : "+text);
         }
         //
@@ -147,18 +141,30 @@ public class NotificationService extends NotificationListenerService {
         this.startForeground(NOTIF_ID, new NotificationCompat.Builder(this,  //!!! I changed this ---> startForeground(NOTIF_ID, new NotificationCompat.Builder(this,
                 NOTIF_CHANNEL_ID)
                 .setOngoing(true)
-                .setSmallIcon(R.drawable.notif_icon)
+                .setSmallIcon(R.drawable.notify_icon)
                 .setContentTitle(getString(R.string.app_name))
-                .setContentText("Service is running in the background")
+                .setContentText("Notify is now running in the background")
                 .setContentIntent(pendingIntent)
                 .build());
-        //
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(new Intent(getApplicationContext(),TryService.class));
         }else{
             startService(new Intent(getApplicationContext(),TryService.class));
         }
         //
+    }
+
+    private void say_the_text(String textToSay){
+        int speechStatus;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            speechStatus = textToSpeech.speak(textToSay, TextToSpeech.QUEUE_FLUSH, null,null);
+        } else {
+            speechStatus = textToSpeech.speak(textToSay, TextToSpeech.QUEUE_FLUSH, null);
+        }
+        if (speechStatus == TextToSpeech.ERROR) {
+            Log.e("TTS", "Error in converting Text to Speech!");
+        }
     }
 
 
@@ -178,24 +184,27 @@ public class NotificationService extends NotificationListenerService {
         }
     }
 
-    /*
-    @Override
-    public void onListenerDisconnected() {
-        super.onListenerDisconnected();
-    }
+    private TextToSpeech initializeTextToSpeech(){
+        TextToSpeech tts = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if (status == TextToSpeech.SUCCESS) {
+                    //int ttsLang = textToSpeech.setLanguage(Locale.US);
+                    int ttsLang = textToSpeech.setLanguage(Locale.getDefault());
 
-
-    @Override
-    public void onLowMemory() {
-        super.onLowMemory();
-        freeMemory();
-    }
-    */
-
-    public void freeMemory(){
-        System.runFinalization();
-        Runtime.getRuntime().gc();
-        System.gc();
+                    if (ttsLang == TextToSpeech.LANG_MISSING_DATA
+                            || ttsLang == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        Log.e("TTS", "The Language is not supported!");
+                    } else {
+                        Log.i("TTS", "Language Supported.");
+                    }
+                    Log.i("TTS", "Initialization success.");
+                } else {
+                    Toast.makeText(getApplicationContext(), "TTS Initialization failed!", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        return tts;
     }
 
     @Override
