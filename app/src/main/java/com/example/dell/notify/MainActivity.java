@@ -208,12 +208,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         SmsManager smsManager = SmsManager.getDefault();
         smsManager.sendTextMessage(phoneNo, null, message, null, null);
         //
-        list_of_notifications.remove(0);
-        if(!list_of_notifications.isEmpty()){
-            process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
-        }else{
-            notification_in_process=false; // after processing all intents inside the arraylist
-        }
+        remove_intent();
         //
         Toast.makeText(getApplicationContext(), "SMS sent.",Toast.LENGTH_LONG).show();
     }
@@ -242,12 +237,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     process_notification(list_of_notifications.get(0));
                 } else {
                     Toast.makeText(getApplicationContext(),"SMS failed, please try again.", Toast.LENGTH_LONG).show();
-                    list_of_notifications.remove(0);
-                    if(!list_of_notifications.isEmpty()){
-                        process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
-                    }else{
-                        notification_in_process=false; // after processing all intents inside the arraylist
-                    }
+                    remove_intent();// if user denies permission // just remove intent and continue with next processing
                 }
                 break;
             }
@@ -256,12 +246,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
                 }else{
                     Toast.makeText(this, "permission to record audio is denied", Toast.LENGTH_SHORT).show();
-                    list_of_notifications.remove(0);
-                    if(!list_of_notifications.isEmpty()){
-                        process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
-                    }else{
-                        notification_in_process=false; // after processing all intents inside the arraylist
-                    }
+                    remove_intent();// if user denies permission // just remove intent and continue with next processing
                 }
                 break;
             case REQ_CODE_PERMISSIONS_FOR_SMS_AND_AUDIO:
@@ -296,12 +281,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             intent.setPackage("com.whatsapp");  // choose whatsapp app
             startActivity(intent);
             //
-            list_of_notifications.remove(0);
-            if(!list_of_notifications.isEmpty()){
-                process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
-            }else{
-                notification_in_process=false; // after processing all intents inside the arraylist
-            }
+            remove_intent();
             //
         }
         catch (Exception e){
@@ -342,12 +322,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
     @Override
     public void onError(int i) {
-        list_of_notifications.remove(0);
-        if(!list_of_notifications.isEmpty()){
-            process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
-        }else{
-            notification_in_process=false; // after processing all intents inside the arraylist
-        }
+        remove_intent(); // process next intent in the list
     }
 
     @Override
@@ -364,15 +339,18 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             sendSMSMessage(phoneNo,response); //
         }else if(packageName.equals(messenger)){
             // reply to messenger
+            //
+            // then remove the intent cause its processing is done
+            remove_intent();
+            //
         }else if(packageName.equals(messenger_lite)){
             // reply to messenger lite
+            //
+            // then remove the intent cause its processing is done
+            remove_intent();
+            //
         }else {
-            list_of_notifications.remove(0);
-            if(!list_of_notifications.isEmpty()){
-                process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
-            }else{
-                notification_in_process=false; // after processing all intents inside the arraylist
-            }
+            remove_intent();//proceed with next intent in the list
         }
     }
 
@@ -386,6 +364,16 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
     }
     // ------ end -------
+
+    private void remove_intent(){
+        list_of_notifications.remove(0);
+        if(!list_of_notifications.isEmpty()){
+            process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
+        }else{
+            notification_in_process=false; // after processing all intents inside the arraylist
+        }
+        //
+    }
 
     //  For the LocalBroadcast
     public BroadcastReceiver onNotice= new BroadcastReceiver() {
@@ -432,23 +420,19 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 check_record_audio_permission();
             }else{
                 // package name does not require any response
-                speechStatus1 = textToSpeech.speak("you have received  a new message from"+ sayText, TextToSpeech.QUEUE_FLUSH, null, null);
-                list_of_notifications.remove(0);
-                if(!list_of_notifications.isEmpty()){
-                    process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
-                }else{
-                    notification_in_process=false; // after processing all intents inside the arraylist
+                speechStatus1 = textToSpeech.speak("you have received  a new notification: "+ sayText, TextToSpeech.QUEUE_FLUSH, null, null);
+                while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
+                    Log.i("tts","text to speech");
                 }
+                remove_intent();
             }
         } else {
             // if android version is <6 // just read the message only
-            speechStatus1 = textToSpeech.speak("you have received  a new message from" + sayText, TextToSpeech.QUEUE_FLUSH, null, null);
-            list_of_notifications.remove(0);
-            if(!list_of_notifications.isEmpty()){
-                process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
-            }else{
-                notification_in_process=false; // after processing all intents inside the arraylist
+            speechStatus1 = textToSpeech.speak("you have received  a new notification: " + sayText, TextToSpeech.QUEUE_FLUSH, null, null);
+            while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
+                Log.i("tts","text to speech");
             }
+            remove_intent();
         }
     }
 
