@@ -13,17 +13,16 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Telephony;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.speech.tts.TextToSpeech;
 import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
 import java.util.Locale;
 
 
@@ -85,6 +84,9 @@ public class NotificationService extends NotificationListenerService {
             return;
         }
         LocalBroadcastManager.getInstance(context).sendBroadcast(msgrcv);
+        // remove the notification from the status bar if app is sms or whatsapp // to avoid the issue of like "2 messages from this person"
+        if(packageName.equals(Telephony.Sms.getDefaultSmsPackage(this)) || packageName.equals("com.whatsapp"))
+            cancelNotification(sbn.getKey());
     }
 
     @Override
@@ -102,7 +104,6 @@ public class NotificationService extends NotificationListenerService {
         // read all active notifications from this app on the status bar // and from others apps
         StatusBarNotification[] sbn= NotificationService.this.getActiveNotifications();  // may be null in case this app has not yet posted any notification on the status bar
         //
-        ArrayList<String> all=new ArrayList<>();
         for(StatusBarNotification noti : sbn){
             String packageName = noti.getPackageName();
             Bundle extras = noti.getNotification().extras;
@@ -111,22 +112,13 @@ public class NotificationService extends NotificationListenerService {
             if(extras.getCharSequence("android.text") != null){
                 text = extras.getCharSequence("android.text").toString();
             }else{
-                text="text is empty";
+                text="message is empty";
             }
-            //
             //function to say the text // text to speech
-            //say_the_text("New Message: Notify is now running in the background tap for more options");
-            say_the_text("New Message from Notify app: "+text);
+            say_the_text("New"+packageName+" Message: "+title+" "+text);  // will read only the earliest notification on the status bar // means only sbn[0]
             //
-            all.add(title+" it says : "+text);
         }
-        //
-        Intent allNoti = new Intent("allNotifications"); // action --> "allNotifications"
-        allNoti.putExtra("notifications", all);
-        //
         STATUS_BAR_READ_ONCE=true; // status bar is read already
-        // send localbroadcast  action --> "allNotifications"
-        LocalBroadcastManager.getInstance(context).sendBroadcast(allNoti);
     }
 
     ////////////////////////////////////////////////////////////////
