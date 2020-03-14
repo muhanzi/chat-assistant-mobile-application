@@ -13,6 +13,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.Build;
@@ -20,12 +21,14 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Messenger;
+import android.provider.ContactsContract;
 import android.provider.Settings;
 import android.provider.Telephony;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
@@ -48,7 +51,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     private Button button_start_now;
     private static final int MY_PERMISSIONS_REQUEST_SEND_SMS =0 ;
     private final int REQ_CODE_FOR_RECORD_AUDIO_PERMISSION = 33;
-    private final int REQ_CODE_PERMISSIONS_FOR_SMS_AND_AUDIO=55;
+    private final int REQ_CODE_PERMISSIONS_FOR_SMS_AUDIO_CONTACTS=55;
     private TextToSpeech textToSpeech;
     //
     private SpeechRecognizer mSpeechRecognizer;
@@ -72,6 +75,10 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     //
     private String packageName,title; // packageName--> name of the app from which comes the notification and title --> is the sender of the notification
     private String whatsapp_package_name,sms_package_name,messenger,messenger_lite;
+    //
+    private Cursor cursor;
+    private String sms_to_phone_number="";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -94,6 +101,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         setContentView(R.layout.activity_main);
         button_start_now =(Button) findViewById(R.id.start_now);
         textToSpeech = initializeTextToSpeech();
+        textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
         //
         mSpeechRecognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -116,6 +124,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         keep_sending_notification_after_screen_is_off(); // !!!!!!!!!!!!!!!!!!!!!!!!!!
         keep_broadcast();
         check_permissions();
+        register_broadcasts_for_power_connection();
 
         button_start_now.setOnClickListener(new View.OnClickListener() {  // after enabling notification listener in the settings
             @Override
@@ -156,17 +165,10 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 showNotification(); // Know that a notification can be shown even without the "Notification listener" permission
                 start_service_with_alarm_manager();
                 schedule_the_job(); //  since I added JobScheduler // something better changed
-                // register broadcast receiver for phone charger plugged in
-                IntentFilter filter = new IntentFilter(Intent.ACTION_POWER_CONNECTED);
-                getApplicationContext().registerReceiver(broadcastReceiver_for_charger_plugged, filter);
-                // register broadcast receiver for phone charger plugged in
-                IntentFilter intentFilter = new IntentFilter(Intent.ACTION_POWER_DISCONNECTED);
-                getApplicationContext().registerReceiver(broadcastReceiver_for_charger_unplugged, intentFilter);
-
                 //
             }else{
                 // NotificationService is not running
-                Toast.makeText(MainActivity.this, "NotificationService is not running", Toast.LENGTH_LONG).show();
+                Toast.makeText(MainActivity.this, "NotificationService is not running, please restart it", Toast.LENGTH_LONG).show();
                 // something like  // try this only and see
                 Intent intent = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
                 startActivity(intent);
@@ -183,12 +185,21 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, 0);
         AlarmManager alarm = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
         alarm.cancel(pendingIntent); // comment this
-        alarm.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(),5000, pendingIntent); // will be forced up to 60000 millisec
+        alarm.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(),60000, pendingIntent); //5000 // will be forced up to 60000 milliseconds by android system
     }
 
     public boolean check_if_device_is_charging(){
         BatteryManager batteryManager=(BatteryManager) this.getSystemService(Context.BATTERY_SERVICE);
         return batteryManager.isCharging();
+    }
+
+    private void register_broadcasts_for_power_connection(){
+        // register broadcast receiver for phone charger plugged in
+        IntentFilter filter = new IntentFilter(Intent.ACTION_POWER_CONNECTED);
+        getApplicationContext().registerReceiver(broadcastReceiver_for_charger_plugged, filter);
+        // register broadcast receiver for phone charger plugged in
+        IntentFilter intentFilter = new IntentFilter(Intent.ACTION_POWER_DISCONNECTED);
+        getApplicationContext().registerReceiver(broadcastReceiver_for_charger_unplugged, intentFilter);
     }
 
     private BroadcastReceiver broadcastReceiver_for_charger_plugged =new BroadcastReceiver() {
@@ -204,16 +215,22 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
     };
-    public void sendSMSText(String phoneNo,String message){
+
+    public void sendSMSText(String message){
         SmsManager smsManager = SmsManager.getDefault();
-        smsManager.sendTextMessage(phoneNo, null, message, null, null);
+        smsManager.sendTextMessage(sms_to_phone_number, null, message, null, null);
         //
-        remove_intent();
+        list_of_notifications.remove(0);
+        if(!list_of_notifications.isEmpty()){
+            process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
+        }else{
+            notification_in_process=false; // after processing all intents inside the arraylist
+        }
         //
         Toast.makeText(getApplicationContext(), "SMS sent.",Toast.LENGTH_LONG).show();
     }
 
-    protected void sendSMSMessage(String phoneNo,String message) {
+    protected void sendSMSMessage(String message) {
 
         if (ContextCompat.checkSelfPermission(this,Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,Manifest.permission.SEND_SMS)) {
@@ -223,7 +240,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                         MY_PERMISSIONS_REQUEST_SEND_SMS);
             }
         }else{
-            sendSMSText(phoneNo,message);
+            sendSMSText(message);
         }
     }
 
@@ -237,7 +254,14 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     process_notification(list_of_notifications.get(0));
                 } else {
                     Toast.makeText(getApplicationContext(),"SMS failed, please try again.", Toast.LENGTH_LONG).show();
-                    remove_intent();// if user denies permission // just remove intent and continue with next processing
+                    //
+                    list_of_notifications.remove(0);
+                    if(!list_of_notifications.isEmpty()){
+                        process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
+                    }else{
+                        notification_in_process=false; // after processing all intents inside the arraylist
+                    }
+                    //
                 }
                 break;
             }
@@ -246,10 +270,17 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
                 }else{
                     Toast.makeText(this, "permission to record audio is denied", Toast.LENGTH_SHORT).show();
-                    remove_intent();// if user denies permission // just remove intent and continue with next processing
+                    //
+                    list_of_notifications.remove(0);
+                    if(!list_of_notifications.isEmpty()){
+                        process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
+                    }else{
+                        notification_in_process=false; // after processing all intents inside the arraylist
+                    }
+                    //
                 }
                 break;
-            case REQ_CODE_PERMISSIONS_FOR_SMS_AND_AUDIO:
+            case REQ_CODE_PERMISSIONS_FOR_SMS_AUDIO_CONTACTS:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     Toast.makeText(this, "permissions allowed", Toast.LENGTH_SHORT).show();
                 } else {
@@ -270,23 +301,54 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     
     private void check_permissions(){
         ActivityCompat.requestPermissions(this,
-                new String[]{Manifest.permission.SEND_SMS,Manifest.permission.RECORD_AUDIO},
-                REQ_CODE_PERMISSIONS_FOR_SMS_AND_AUDIO);
+                new String[]{Manifest.permission.SEND_SMS,Manifest.permission.RECORD_AUDIO,Manifest.permission.READ_CONTACTS},
+                REQ_CODE_PERMISSIONS_FOR_SMS_AUDIO_CONTACTS);
     }
 
-    public void openWhatsApp(String text,String toNumber){
+    public void openWhatsApp(String text){  //this opnes whatsapp and user has to click on send button
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setData(Uri.parse("http://api.whatsapp.com/send?phone="+toNumber +"&text="+text));
+            intent.setData(Uri.parse("http://api.whatsapp.com/send?phone="+sms_to_phone_number +"&text="+text));
             intent.setPackage("com.whatsapp");  // choose whatsapp app
             startActivity(intent);
             //
-            remove_intent();
+            list_of_notifications.remove(0);
+            if(!list_of_notifications.isEmpty()){
+                process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
+            }else{
+                notification_in_process=false; // after processing all intents inside the arraylist
+            }
             //
         }
         catch (Exception e){
             e.printStackTrace();
         }
+    }
+
+    private void send_message_on_whatsapp(final String text){
+        final Intent intent=new Intent(Intent.ACTION_VOICE_COMMAND);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        //intent.putExtra("message","send nehemiah how are you doing on whatsapp");
+        startActivity(intent);
+        final Handler handler=new Handler();
+        final String contact= title.replaceAll(" ","");
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                int speechStatus = textToSpeech.speak("text "+contact+" "+text+" on whatsapp", TextToSpeech.QUEUE_FLUSH, null, null);
+                while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
+                    Log.i("tts","text to speech");
+                }
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        // we stop the google assistant intent
+                        stopService(intent); //try
+                        remove_intent();
+                    }
+                },20000); // give google assistant 20 seconds to process
+            }
+        },2000); // 2 secs// just wait for google assistant to get ready
     }
 
     @Override
@@ -322,35 +384,56 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
     @Override
     public void onError(int i) {
-        remove_intent(); // process next intent in the list
+        // process next intent in the list
+        list_of_notifications.remove(0);
+        if(!list_of_notifications.isEmpty()){
+            process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
+        }else{
+            notification_in_process=false; // after processing all intents inside the arraylist
+        }
+        //
     }
 
     @Override
     public void onResults(Bundle results) {
         ArrayList result = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
         String response=result.get(0).toString();
-        String toNumber = "256754504768"; // Replace with mobile phone number without +Sign or leading zeros, but with country code
-        //Suppose your country is India and your phone number is “xxxxxxxxxx”, then you need to send “91xxxxxxxxxx”.
-        // check title inside contacts and see
         if(packageName.equals(whatsapp_package_name)){
-            openWhatsApp(response,toNumber); //title --> change this value to the phone number that is search with the title given // search inside contacts with content provider
+            //openWhatsApp(response); //
+            send_message_on_whatsapp(response);
         }else if(packageName.equals(sms_package_name)){
-            String phoneNo="+256792902963"; // search title inside contacts
-            sendSMSMessage(phoneNo,response); //
+            sendSMSMessage(response); //
         }else if(packageName.equals(messenger)){
-            // reply to messenger
+            // reply to messenger  // using intent
             //
             // then remove the intent cause its processing is done
-            remove_intent();
+            list_of_notifications.remove(0);
+            if(!list_of_notifications.isEmpty()){
+                process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
+            }else{
+                notification_in_process=false; // after processing all intents inside the arraylist
+            }
             //
         }else if(packageName.equals(messenger_lite)){
             // reply to messenger lite
             //
             // then remove the intent cause its processing is done
-            remove_intent();
+            list_of_notifications.remove(0);
+            if(!list_of_notifications.isEmpty()){
+                process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
+            }else{
+                notification_in_process=false; // after processing all intents inside the arraylist
+            }
             //
         }else {
-            remove_intent();//proceed with next intent in the list
+            //proceed with next intent in the list
+            list_of_notifications.remove(0);
+            if(!list_of_notifications.isEmpty()){
+                process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
+            }else{
+                notification_in_process=false; // after processing all intents inside the arraylist
+            }
+            //
         }
     }
 
@@ -402,38 +485,118 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         String sayText = title + " " + text;
         //Toast.makeText(this, "The ticker text is: " + ticker, Toast.LENGTH_LONG).show(); // ticker // has the same value as the title
 
-        int speechStatus1;
+        int speechStatus,speechStatus1;
         if (textToSpeech == null) {  // I'm doing this because the user may kill "--> onDestroy()"  the mainactivity which initializes the testToSpeech inside the onCreate  // so when our service sends the localBroadcast TextToSpeech will be available
             textToSpeech = initializeTextToSpeech();
+            textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            // put a condition here whether the package name (app) requires response  // sms,whatsapp,messenger
-            if(packageName.equals(whatsapp_package_name)|| packageName.equals(sms_package_name) || packageName.equals(messenger)|| packageName.equals(messenger_lite)){
-                speechStatus1 = textToSpeech.speak("you have received  a new message from"+ sayText, TextToSpeech.QUEUE_FLUSH, null, null);
-                while(textToSpeech.isSpeaking()){  // works well
+            if(packageName.equals(whatsapp_package_name)){
+                //
+                speechStatus = textToSpeech.speak("you have received  a new message from"+ sayText, TextToSpeech.QUEUE_FLUSH, null, null);
+                while(textToSpeech.isSpeaking()){  // works well // if we don't put this while loop above // text to speech will just jump to the next textToSpeech.speak() and leaves the previous one
                     Log.i("tts","text to speech");
-                } // if we don't put this while loop above // text to speech will just jump to the next textToSpeech.speak() and leaves the previous one
+                }
+                //
+                if(!title.equals("whatsapp") && fetch_contact()){ // to avoid replying to messages like "2 messages from 2 chatts" // checking for new messages,... // and to avoid whatsapp groups ,they are not in our contacts // and new number I mean here an unknown number // we don't reply
+                    speechStatus1 = textToSpeech.speak(" if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
+                    while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
+                        Log.i("tts","text to speech");
+                    }
+                    check_record_audio_permission();
+                }else {
+                    list_of_notifications.remove(0);
+                    if(!list_of_notifications.isEmpty()){
+                        process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
+                    }else{
+                        notification_in_process=false; // after processing all intents inside the arraylist
+                    }
+                    //
+                }
+            }else if(packageName.equals(sms_package_name)){
+                //
+                speechStatus = textToSpeech.speak("you have received  a new message from"+ sayText, TextToSpeech.QUEUE_FLUSH, null, null);
+                while(textToSpeech.isSpeaking()){  // works well // if we don't put this while loop above // text to speech will just jump to the next textToSpeech.speak() and leaves the previous one
+                    Log.i("tts","text to speech");
+                }
+                //
+                if(fetch_contact()){ // contact exist // it is saved
+                    speechStatus1 = textToSpeech.speak(" if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
+                    while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
+                        Log.i("tts","text to speech");
+                    }
+                    check_record_audio_permission();
+                }else{ // new number // unknown number
+                    speechStatus1 = textToSpeech.speak(" if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
+                    while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
+                        Log.i("tts","text to speech");
+                    }
+                    sms_to_phone_number=title.replaceAll("\\s",""); // remove all spaces
+                    sms_to_phone_number=sms_to_phone_number.replace("+","");
+                    check_record_audio_permission();
+                }
+
+            }else if(packageName.equals(messenger)|| packageName.equals(messenger_lite)){
+                //
+                speechStatus = textToSpeech.speak("you have received  a new message from"+ sayText, TextToSpeech.QUEUE_FLUSH, null, null);
+                while(textToSpeech.isSpeaking()){  // works well // if we don't put this while loop above // text to speech will just jump to the next textToSpeech.speak() and leaves the previous one
+                    Log.i("tts","text to speech");
+                }
+                //
                 speechStatus1 = textToSpeech.speak(" if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
                 while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
                     Log.i("tts","text to speech");
                 }
                 check_record_audio_permission();
             }else{
-                // package name does not require any response
-                speechStatus1 = textToSpeech.speak("you have received  a new notification: "+ sayText, TextToSpeech.QUEUE_FLUSH, null, null);
+                // package name does not require any response // we don't provide response for other apps like browsers,...
+                speechStatus = textToSpeech.speak("you have received  a new notification: "+ sayText, TextToSpeech.QUEUE_FLUSH, null, null);
                 while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
                     Log.i("tts","text to speech");
                 }
-                remove_intent();
+                //
+                list_of_notifications.remove(0);
+                if(!list_of_notifications.isEmpty()){
+                    process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
+                }else{
+                    notification_in_process=false; // after processing all intents inside the arraylist
+                }
+                //
             }
+            //
         } else {
             // if android version is <6 // just read the message only
-            speechStatus1 = textToSpeech.speak("you have received  a new notification: " + sayText, TextToSpeech.QUEUE_FLUSH, null, null);
+            speechStatus = textToSpeech.speak("you have received  a new notification: " + sayText, TextToSpeech.QUEUE_FLUSH, null);
             while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
                 Log.i("tts","text to speech");
             }
-            remove_intent();
+            //
+            list_of_notifications.remove(0);
+            if(!list_of_notifications.isEmpty()){
+                process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
+            }else{
+                notification_in_process=false; // after processing all intents inside the arraylist
+            }
+            //
         }
+    }
+
+    private boolean fetch_contact(){
+        cursor=getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,null,null,null,null);
+        startManagingCursor(cursor);
+        String [] from={ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,ContactsContract.CommonDataKinds.Phone.NUMBER,ContactsContract.CommonDataKinds.Phone._ID};
+        int to[]={android.R.id.text1,android.R.id.text2};
+        for(int i=0;i<cursor.getCount();i++){
+            cursor.moveToPosition(i);
+            String name=cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
+            if(title.equals(name)){
+                sms_to_phone_number=cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
+                sms_to_phone_number=sms_to_phone_number.replaceAll("\\s",""); // remove all spaces
+                sms_to_phone_number=sms_to_phone_number.replace("+","");
+                return true;
+            }
+        }
+        return false;
     }
 
     //check notification access setting is enabled or not
@@ -462,7 +625,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 if (status == TextToSpeech.SUCCESS) {
                     //int ttsLang = textToSpeech.setLanguage(Locale.US);
                     int ttsLang = textToSpeech.setLanguage(Locale.getDefault());
-
                     if (ttsLang == TextToSpeech.LANG_MISSING_DATA
                             || ttsLang == TextToSpeech.LANG_NOT_SUPPORTED) {
                         Log.e("TTS", "The Language is not supported!");
@@ -478,15 +640,29 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         return tts;
     }
 
+    private UtteranceProgressListener utteranceProgressListener=new UtteranceProgressListener() {
+        @Override
+        public void onStart(String s) {
 
-    public void afterBootCompleted(){
-//        createNotificationChannel();
-//        //
-//        if(checkNotificationEnabled()){
-//            LocalBroadcastManager.getInstance(this).registerReceiver(allNotificationsReceiver, new IntentFilter("allNotifications"));
-//            showNotification();  // Know that a notification can be shown even without the "Notification listener" permission
-//        }
-    }
+        }
+
+        @Override
+        public void onDone(String s) {
+
+        }
+
+        @Override
+        public void onError(String s) {
+            //
+            list_of_notifications.remove(0);
+            if(!list_of_notifications.isEmpty()){
+                process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
+            }else{
+                notification_in_process=false; // after processing all intents inside the arraylist
+            }
+            //
+        }
+    };
 
     private void createNotificationChannel() {
         // Create the NotificationChannel, but only on API 26+ because

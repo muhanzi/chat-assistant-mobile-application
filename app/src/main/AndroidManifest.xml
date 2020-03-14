@@ -9,7 +9,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- try this -->
+    <uses-permission android:name="android.permission.READ_CONTACTS"/>
     <uses-permission
         android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
         tools:ignore="ProtectedPermissions" />
@@ -35,31 +35,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <receiver
-            android:name=".TheBroadcast"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-        <receiver
-            android:name=".TheBroadcast2"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.SCREEN_ON" />
-            </intent-filter>
-        </receiver>
-        <receiver
-            android:name=".TheBroadcast3"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.USER_PRESENT" />
-            </intent-filter>
-        </receiver>
-
         <service
             android:name=".NotificationService"
             android:label="@string/app_name"
@@ -68,14 +43,6 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
-        <!--
-        // for normal sms we can use this broadcast // instead of notification !!!!!!!!
-        <receiver android:name=".myClassToHandleTheReceiveOfThisBroadcast">
-           <intent-filter>
-               <action android:name="android.provider.Telephony.SMS_RECEIVED" />
-           </intent-filter>
-        </receiver>
-        -->
         <service
             android:name=".MyService"
             android:enabled="true"
