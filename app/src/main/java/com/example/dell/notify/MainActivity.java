@@ -14,6 +14,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.BatteryManager;
@@ -148,6 +149,17 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     @Override
     protected void onStart() {
         super.onStart();
+        //check if device is charging
+        if(check_if_device_is_charging()){
+            // when phone is charging keep the screen on
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+        //
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
         //check if device is charging
         if(check_if_device_is_charging()){
             // when phone is charging keep the screen on
@@ -373,7 +385,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     public void run() {
                         remove_intent();
                     }
-                },20000); // give google assistant 20 seconds to process
+                },40000); // give google assistant 40 seconds to process
             }
         },2000); // 2 secs// just wait for google assistant to get ready
     }
@@ -386,12 +398,12 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     // for RegisterListener Interface
     @Override
     public void onReadyForSpeech(Bundle bundle) {
-
+        notification_in_process=true; // don't read the next intent in the arrayList
     }
 
     @Override
     public void onBeginningOfSpeech() {
-
+        notification_in_process=true;
     }
 
     @Override
@@ -519,6 +531,11 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             textToSpeech = initializeTextToSpeech();
             textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
         }
+        //
+//        AudioManager audioManager = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
+//        audioManager.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+//        audioManager.abandonAudioFocusRequest()  // when you have replied or after saying the notification
+        //
         Handler handler=new Handler();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             if(packageName.equals(whatsapp_package_name) || packageName.equals(sms_package_name)){
@@ -569,6 +586,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
                 Log.i("tts","text to speech");
             }
+            //  we will have the spam classifier here  // filtering notifications from all other apps and websits
             //
             handler.postDelayed(new Runnable() {
                 @Override
@@ -640,17 +658,10 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
         @Override
         public void onError(String s) {
-            // try this
+            // to prevent ANR dialog (application not responding)
             textToSpeech.stop();
             textToSpeech.shutdown();
-            //
-            list_of_notifications.remove(0);
-            if(!list_of_notifications.isEmpty()){
-                process_notification(list_of_notifications.get(0)); // process the intent which is now on the position 0
-            }else{
-                notification_in_process=false; // after processing all intents inside the arraylist
-            }
-            //
+            process_notification(list_of_notifications.get(0));  // reprocess it
         }
     };
 
@@ -754,12 +765,13 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 // in case of a new number // unknown number
                 sms_to_phone_number=title.replaceAll("\\s",""); // remove all spaces
                 sms_to_phone_number=sms_to_phone_number.replace("+","");
-                int speechStatus = textToSpeech.speak(" if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
-                while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
-                    Log.i("tts","text to speech");
+                if(textToSpeech != null){
+                    int speechStatus = textToSpeech.speak(" if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
+                    while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
+                        Log.i("tts","text to speech");
+                    }
+                    check_record_audio_permission();
                 }
-                check_record_audio_permission();
-
             }else { //for example if message comes from a whatsapp group // delay for 2 secs then continue with next message // or for example : message from whatsapp 4 messages from 2 chata
                 Handler handler=new Handler();
                 handler.postDelayed(new Runnable() {
