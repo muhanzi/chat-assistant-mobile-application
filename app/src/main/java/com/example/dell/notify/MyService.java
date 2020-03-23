@@ -104,8 +104,9 @@ public class MyService extends JobService {
         if(checkNotificationEnabled()){
             NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "channel5")
                     .setSmallIcon(R.drawable.notify_icon)
-                    .setContentTitle("MyService Notification")
-                    .setContentText("JobScheduler is working inside MyService")
+                    .setColor(getColor(R.color.projectColorCode))
+                    .setContentTitle("Notify")
+                    .setContentText("Service is running")
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT);
 
             NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);

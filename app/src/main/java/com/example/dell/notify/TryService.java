@@ -63,8 +63,9 @@ public class TryService extends Service {
                 NOTIF_CHANNEL_ID)
                 .setOngoing(true)
                 .setSmallIcon(R.drawable.notify_icon)
+                .setColor(getColor(R.color.projectColorCode))
                 .setContentTitle(getString(R.string.app_name))
-                .setContentText("TryService is running in the background")
+                .setContentText("Reads aloud all your notifications and Replies for you")
                 .setContentIntent(pendingIntent)
                 .build());
     }
@@ -89,8 +90,9 @@ public class TryService extends Service {
     private void show_notification_after_one_minute(){
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, NOTIF_CHANNEL_ID2)
                 .setSmallIcon(R.drawable.notify_icon)
-                .setContentTitle("Notification to repeat")
-                .setContentText("TryService is working well")
+                .setColor(getColor(R.color.projectColorCode))
+                .setContentTitle("Notify")
+                .setContentText("Your chat assistant")
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT);
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);

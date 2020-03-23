@@ -64,8 +64,9 @@ public class ServiceWithAlarmManager extends Service {
     private void show_notification(){
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context,NOTIF_CHANNEL_ID) // channel4
                 .setSmallIcon(R.drawable.notify_icon)
-                .setContentTitle("Message from ServiceWithAlarmManager")
-                .setContentText("Notification shown")
+                .setColor(getColor(R.color.projectColorCode))
+                .setContentTitle("Notify")
+                .setContentText("Service is running")
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT);
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);

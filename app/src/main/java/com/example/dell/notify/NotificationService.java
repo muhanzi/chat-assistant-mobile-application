@@ -11,6 +11,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Telephony;
@@ -115,7 +116,8 @@ public class NotificationService extends NotificationListenerService {
                 text="message is empty";
             }
             //function to say the text // text to speech
-            say_the_text("New"+packageName+" Message: "+title+" "+text);  // will read only the earliest notification on the status bar // means only sbn[0]
+            //say_the_text("New"+packageName+" Message: "+title+" "+text);  // will read only the earliest notification on the status bar // means only sbn[0]
+            say_the_text("Notify is now running in the background");
             //
         }
         STATUS_BAR_READ_ONCE=true; // status bar is read already
@@ -134,6 +136,7 @@ public class NotificationService extends NotificationListenerService {
                 NOTIF_CHANNEL_ID)
                 .setOngoing(true)
                 .setSmallIcon(R.drawable.notify_icon)
+                .setColor(getColor(R.color.projectColorCode))
                 .setContentTitle(getString(R.string.app_name))
                 .setContentText("Notify is now running in the background")
                 .setContentIntent(pendingIntent)
