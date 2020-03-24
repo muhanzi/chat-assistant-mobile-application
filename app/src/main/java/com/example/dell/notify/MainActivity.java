@@ -93,13 +93,14 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     private Toolbar tool_bar;
     //
     private boolean turn_on_notify=true;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        setContentView(R.layout.activity_main);
+        //
         tool_bar =(Toolbar) findViewById(R.id.mainActivityAppBar);
         setSupportActionBar(tool_bar);
+        getSupportActionBar().setTitle("Notify");
         //
         //check if device is charging
         if(check_if_device_is_charging()){
@@ -119,7 +120,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         myServiceIntent.putExtra("messenger", new Messenger(myHandler));
         startService(myServiceIntent);
         //
-        setContentView(R.layout.activity_main);
         button_start_now =(Button) findViewById(R.id.start_now);
         textToSpeech = initializeTextToSpeech();
         textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
@@ -165,15 +165,14 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        super.onOptionsItemSelected(item);
-        switch(item.getItemId()){
+        switch (item.getItemId()) {
             case R.id.itemSettings:
 //                Intent settings=new Intent(MainActivity.this, SettingsActivity.class);
 //                startActivity(settings);
                 return true;
             case R.id.itemTurnOff:
                 // Turn Notify off
-                turn_on_notify=false;
+                turn_on_notify = false;
                 button_start_now.setText(R.string.start_now);
                 button_start_now.setEnabled(true);
                 return true;
@@ -181,7 +180,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 // open activity to see all reported spams
                 return true;
             default:
-                return false;
+                return super.onOptionsItemSelected(item);
         }
     }
     //

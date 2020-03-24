@@ -6,8 +6,9 @@
     android:background="@color/colorPrimary"
     app:popupTheme="@style/AppTheme"
     app:theme="@style/AppBarStyle"
-    app:title="@string/appBarTitle"
     app:titleTextColor="@color/projectColorCode"
     app:titleTextAppearance="@style/AppBarTextStyle">
+
+    <!--  app:title="@string/appBarTitle"  -->
 
 </android.support.v7.widget.Toolbar>
