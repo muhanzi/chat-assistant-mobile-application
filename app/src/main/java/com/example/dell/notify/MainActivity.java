@@ -523,6 +523,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     public void onResults(Bundle results) {
         ArrayList result = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
         String response=result.get(0).toString();
+        Handler handler=new Handler();
         if(packageName.equals(whatsapp_package_name)){
             //openWhatsApp(response); //
             send_message_on_whatsapp(response);
@@ -532,25 +533,35 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             // reply to messenger  // using intent
             //
             // then remove the intent cause its processing is done
-            list_of_notifications.remove(0);
-            if(!list_of_notifications.isEmpty()){
-                process_notification(); // process the intent which is now on the position 0
-            }else{
-                audioManager.abandonAudioFocus(audioFocusChangeListener);
-                notification_in_process=false; // after processing all intents inside the arraylist
-            }
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    list_of_notifications.remove(0);
+                    if(!list_of_notifications.isEmpty()){
+                        process_notification(); // process the intent which is now on the position 0
+                    }else{
+                        audioManager.abandonAudioFocus(audioFocusChangeListener);
+                        notification_in_process=false; // after processing all intents inside the arraylist
+                    }
+                }
+            },5000);
             //
         }else if(packageName.equals(messenger_lite)){
             // reply to messenger lite
             //
             // then remove the intent cause its processing is done
-            list_of_notifications.remove(0);
-            if(!list_of_notifications.isEmpty()){
-                process_notification(); // process the intent which is now on the position 0
-            }else{
-                audioManager.abandonAudioFocus(audioFocusChangeListener);
-                notification_in_process=false; // after processing all intents inside the arraylist
-            }
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    list_of_notifications.remove(0);
+                    if(!list_of_notifications.isEmpty()){
+                        process_notification(); // process the intent which is now on the position 0
+                    }else{
+                        audioManager.abandonAudioFocus(audioFocusChangeListener);
+                        notification_in_process=false; // after processing all intents inside the arraylist
+                    }
+                }
+            },5000);
             //
         }else {
             //proceed with next intent in the list
