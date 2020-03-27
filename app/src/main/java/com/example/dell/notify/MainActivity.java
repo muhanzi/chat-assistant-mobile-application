@@ -847,8 +847,12 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
                         Log.i("tts","text to speech");
                     }
-                    if(!textToSpeech.isSpeaking())
+                    if(!textToSpeech.isSpeaking()) {
                         check_record_audio_permission();
+                    }else{
+                        textToSpeech.stop();
+                        check_record_audio_permission();
+                    }
                 }
             }else if(contact_name.equals("") && packageName.equals(sms_package_name)){
                 // in case of a new number // unknown number
@@ -859,10 +863,14 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
                         Log.i("tts","text to speech");
                     }
-                    if(!textToSpeech.isSpeaking())
+                    if(!textToSpeech.isSpeaking()) {
                         check_record_audio_permission();
+                    }else{
+                        textToSpeech.stop();
+                        check_record_audio_permission();
+                    }
                 }
-            }else { //for example if message comes from a whatsapp group // delay for 2 secs then continue with next message // or for example : message from whatsapp 4 messages from 2 chats
+            }else { //for example if message comes from a whatsapp group // delay for 5 secs then continue with next message // or for example : message from whatsapp 4 messages from 2 chats
                 Handler handler=new Handler();
                 handler.postDelayed(new Runnable() {
                     @Override
@@ -876,7 +884,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                         }
                         //
                     }
-                },2000);
+                },5000);
             }
         }
     }
@@ -905,8 +913,12 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                         Log.i("tts","text to speech");
                     }
                     //
-                    if(!textToSpeech.isSpeaking())
+                    if(!textToSpeech.isSpeaking()) {
                         check_access_contacts_permission();
+                    }else{
+                        textToSpeech.stop();
+                        check_access_contacts_permission();
+                    }
                     //
                 }else if(packageName.equals(messenger) || packageName.equals(messenger_lite)){
                     while(textToSpeech.isSpeaking()){  // works well // if we don't put this while loop above // text to speech will just jump to the next textToSpeech.speak() and leaves the previous one
@@ -917,8 +929,24 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                         while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
                             Log.i("tts","text to speech");
                         }
-                        if(!textToSpeech.isSpeaking())
+                        if(!textToSpeech.isSpeaking()) {
                             check_record_audio_permission();
+                        }else{
+                            textToSpeech.stop();
+                            check_record_audio_permission();
+                        }
+                    }else{
+                        textToSpeech.stop();
+                        int speechStatus = textToSpeech.speak(" if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
+                        while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
+                            Log.i("tts","text to speech");
+                        }
+                        if(!textToSpeech.isSpeaking()) {
+                            check_record_audio_permission();
+                        }else{
+                            textToSpeech.stop();
+                            check_record_audio_permission();
+                        }
                     }
                 }else{
                     // package name does not require any response // we don't provide response for other apps like browsers,...
@@ -927,6 +955,21 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     }
                     //  we will have the spam classifier here  // filtering notifications from all other apps and websits
                     if(!textToSpeech.isSpeaking()){
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                list_of_notifications.remove(0);
+                                if(!list_of_notifications.isEmpty()){
+                                    process_notification(); // process the intent which is now on the position 0
+                                }else{
+                                    audioManager.abandonAudioFocus(audioFocusChangeListener);
+                                    notification_in_process=false; // after processing all intents inside the arraylist
+                                }
+                                //
+                            }
+                        },5000);
+                    }else {
+                        textToSpeech.stop();
                         handler.postDelayed(new Runnable() {
                             @Override
                             public void run() {
@@ -950,6 +993,21 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     Log.i("tts","text to speech");
                 }
                 if(!textToSpeech.isSpeaking()){
+                    handler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            list_of_notifications.remove(0);
+                            if(!list_of_notifications.isEmpty()){
+                                process_notification(); // process the intent which is now on the position 0
+                            }else{
+                                audioManager.abandonAudioFocus(audioFocusChangeListener);
+                                notification_in_process=false; // after processing all intents inside the arraylist
+                            }
+                            //
+                        }
+                    },5000);
+                }else {
+                    textToSpeech.stop();
                     handler.postDelayed(new Runnable() {
                         @Override
                         public void run() {
