@@ -298,15 +298,27 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         SmsManager smsManager = SmsManager.getDefault();
         smsManager.sendTextMessage(sms_to_phone_number, null, message, null, null);
         //
-        list_of_notifications.remove(0);
-        if(!list_of_notifications.isEmpty()){
-            process_notification(); // process the intent which is now on the position 0
-        }else{
-            audioManager.abandonAudioFocus(audioFocusChangeListener);
-            notification_in_process=false; // after processing all intents inside the arraylist
+        Handler handler=new Handler();
+        Toast.makeText(getApplicationContext(), "SMS sent.",Toast.LENGTH_LONG).show();
+        int speechStatus = textToSpeech.speak("message sent", TextToSpeech.QUEUE_FLUSH, null, null);
+        while(textToSpeech.isSpeaking()){
+            Log.i("sms","response");
+        }
+        if(!textToSpeech.isSpeaking()){
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    list_of_notifications.remove(0);
+                    if(!list_of_notifications.isEmpty()){
+                        process_notification(); // process the intent which is now on the position 0
+                    }else{
+                        audioManager.abandonAudioFocus(audioFocusChangeListener);
+                        notification_in_process=false; // after processing all intents inside the arraylist
+                    }
+                }
+            },5000); // after 5 seconds proceed with next intent
         }
         //
-        Toast.makeText(getApplicationContext(), "SMS sent.",Toast.LENGTH_LONG).show();
     }
 
     protected void sendSMSMessage(String message) {
@@ -497,15 +509,14 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
     @Override
     public void onError(int i) {
-        // reprocess the intent at index 0 after 10 seconds
+        // onError()  means user did not say anything // silence  // no response
         Handler handler=new Handler();
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                process_notification();
+                remove_intent();  // process the next intent
             }
-        },10000);
-        //
+        },5000);
     }
 
     @Override
@@ -646,6 +657,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         }else{
             notification_in_process=false;    // this intent will be processed again when a new intent arrives
             //keep the intent in the arrayList
+            Toast.makeText(this, "Audio focus permission is denied", Toast.LENGTH_SHORT).show();
         }
     }
 
