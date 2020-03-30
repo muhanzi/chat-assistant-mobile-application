@@ -12,6 +12,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.media.AudioManager;
@@ -53,7 +54,7 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements RecognitionListener{
 
-    private Button button_start_now;
+    public Button button_start_now;
     private static final int MY_PERMISSIONS_REQUEST_SEND_SMS =0 ;
     private final int REQ_CODE_FOR_RECORD_AUDIO_PERMISSION = 33;
     private final int REQ_CODE_FOR_ACCESS_CONTACTS = 27;
@@ -90,9 +91,12 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     //
     private Toolbar tool_bar;
     //
-    private boolean turn_on_notify=true;
-    //
     private String text_to_say="";
+    //
+    private static final String MyPREFERENCES = "MyPrefs" ;
+    public static SharedPreferences sharedpreferences; // stores data in a file
+    private SharedPreferences.Editor editor;
+    //
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -144,7 +148,12 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
         check_permissions();
         register_broadcasts_for_power_connection();
-
+        //
+        sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
+        editor = sharedpreferences.edit();
+        editor.putBoolean("turn_on_notify",true);
+        editor.commit();
+        //
         button_start_now.setOnClickListener(new View.OnClickListener() {  // after enabling notification listener in the settings
             @Override
             public void onClick(View view) {
@@ -170,9 +179,11 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 return true;
             case R.id.itemTurnOff:
                 // Turn Notify off
-                turn_on_notify = false;
+                editor.putBoolean("turn_on_notify",false);
+                editor.commit();
                 button_start_now.setText(R.string.start_now);
                 button_start_now.setEnabled(true);
+                notification_in_process=false;// processing is stopped
                 return true;
             case R.id.itemReportedSpams:
                 // open activity to see all reported spams
@@ -202,6 +213,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             // when phone is charging keep the screen on
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
+        boolean turn_on_notify=sharedpreferences.getBoolean("turn_on_notify",true); // in case sharedpreferences does not provide data, the default value of this boolean we set it to true
         if(isMyServiceRunning(NotificationService.class)){
             if(isMyServiceRunning(ServiceWithAlarmManager.class)){
                 if(turn_on_notify){
@@ -220,6 +232,8 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             button_start_now.setEnabled(true);
         }
         //
+        editor.putBoolean("MainActivityIsActive",true);
+        editor.commit();
     }
 
     @Override
@@ -235,7 +249,14 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
     private void  startNow(){
         if(checkNotificationEnabled()){
-            turn_on_notify=true; // just in case use turned it off
+            //
+            // Turn Notify on  // in case user turned it off
+            editor.putBoolean("turn_on_notify",true);
+            editor.commit();
+            if(!list_of_notifications.isEmpty()){
+                list_of_notifications.clear();  // starting afresh // to avoid endless notifications like during phone call or when downloading
+            }
+            //
             if(isMyServiceRunning(NotificationService.class)){
                 //
                 showNotification(); // Know that a notification can be shown even without the "Notification listener" permission
@@ -479,6 +500,10 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     @Override
     public void onDestroy() {
         super.onDestroy();
+        // when the activity is killed
+        SharedPreferences.Editor editor = sharedpreferences.edit();
+        editor.putBoolean("MainActivityIsActive",false);
+        editor.commit();
     }
 
     // for RegisterListener Interface
@@ -494,7 +519,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
     @Override
     public void onRmsChanged(float v) {
-
     }
 
     @Override
@@ -578,20 +602,11 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
     @Override
     public void onPartialResults(Bundle bundle) {
-        Handler handler=new Handler();
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                // reprocess the intent at index 0
-                process_notification();
-                //
-            }
-        },10000);
+
     }
 
     @Override
     public void onEvent(int i, Bundle bundle) {
-
     }
     // ------ end -------
 
@@ -611,6 +626,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
         @Override
         public void onReceive(Context context, Intent intent) {
+            boolean turn_on_notify=sharedpreferences.getBoolean("turn_on_notify",true);
             if(turn_on_notify){  // proceed only if turn_on_notify==true
                 list_of_notifications.add(intent);
                 if(!notification_in_process){
@@ -623,6 +639,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     };
     //
 
+    /* with Speak async class // Notify was running with too many issues
     private void process_notification() {
         if(!turn_on_notify) {  // if turn_on_notify==false // return
             return;
@@ -666,10 +683,169 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             }
             //
         }else{
-            notification_in_process=false;    // this intent will be processed again when a new intent arrives
+            notification_in_process=false;    // this intent will be processed again when a new intent arrives  // works fine
             //keep the intent in the arrayList
             Toast.makeText(this, "Audio focus permission is denied", Toast.LENGTH_SHORT).show();
         }
+    }
+    */
+
+    // process_notification() without using async class Speak
+    private void process_notification(){
+        boolean turn_on_notify=sharedpreferences.getBoolean("turn_on_notify",true);
+        if(!turn_on_notify) {  // if turn_on_notify==false // return
+            return;
+        }
+        if(request_audio_focus()) {
+            // Notification in process
+            notification_in_process = true;
+            //
+            contact_name = "";  // the contact name must be fetched every time we process message //intent
+            Intent intent = list_of_notifications.get(0);
+            packageName = intent.getStringExtra("package");
+            title = intent.getStringExtra("title");
+            String text = intent.getStringExtra("text");
+            String ticker = intent.getStringExtra("ticker");
+            int id = intent.getIntExtra("icon", 0);  // see the rest of the code in case we need the icon of the notification
+            String sayText = title + " " + text;
+            //Toast.makeText(this, "The ticker text is: " + ticker, Toast.LENGTH_LONG).show(); // ticker // has the same value as the title
+            //
+            if (textToSpeech == null) {  // I'm doing this because the user may kill "--> onDestroy()"  the mainactivity which initializes the testToSpeech inside the onCreate  // so when our service sends the localBroadcast TextToSpeech will be available
+                textToSpeech = initializeTextToSpeech();
+                textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
+            }
+            //
+            Handler handler=new Handler();
+            int speechStatus;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                if(packageName.equals(whatsapp_package_name) || packageName.equals(sms_package_name)){
+                    speechStatus = textToSpeech.speak("you have received  a new message from"+ sayText, TextToSpeech.QUEUE_FLUSH, null, null);
+                    while(textToSpeech.isSpeaking()){  // works well // if we don't put this while loop above // text to speech will just jump to the next textToSpeech.speak() and leaves the previous one
+                        Log.i("tts","text to speech");
+                    }
+                    //
+                    if(!textToSpeech.isSpeaking()) {
+                        check_access_contacts_permission();
+                    }else{
+                        textToSpeech.stop();
+                        check_access_contacts_permission();
+                    }
+                    //
+                }else if(packageName.equals(messenger) || packageName.equals(messenger_lite)){
+                    speechStatus = textToSpeech.speak("you have received  a new message from"+ sayText, TextToSpeech.QUEUE_FLUSH, null, null);
+                    while(textToSpeech.isSpeaking()){  // works well // if we don't put this while loop above // text to speech will just jump to the next textToSpeech.speak() and leaves the previous one
+                        Log.i("tts","text to speech");
+                    }
+                    if(!textToSpeech.isSpeaking()){
+                        speechStatus = textToSpeech.speak(" if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
+                        while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
+                            Log.i("tts","text to speech");
+                        }
+                        if(!textToSpeech.isSpeaking()) {
+                            check_record_audio_permission();
+                        }else{
+                            textToSpeech.stop();
+                            check_record_audio_permission();
+                        }
+                    }else{
+                        textToSpeech.stop();
+                        speechStatus = textToSpeech.speak(" if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
+                        while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
+                            Log.i("tts","text to speech");
+                        }
+                        if(!textToSpeech.isSpeaking()) {
+                            check_record_audio_permission();
+                        }else{
+                            textToSpeech.stop();
+                            check_record_audio_permission();
+                        }
+                    }
+                }else{
+                    // package name does not require any response // we don't provide response for other apps like browsers,...
+                    speechStatus = textToSpeech.speak("you have received  a new notification: "+ sayText, TextToSpeech.QUEUE_FLUSH, null, null);
+                    while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
+                        Log.i("tts","text to speech");
+                    }
+                    //  we will have the spam classifier here  // filtering notifications from all other apps and websits
+                    if(!textToSpeech.isSpeaking()){
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                list_of_notifications.remove(0);
+                                if(!list_of_notifications.isEmpty()){
+                                    process_notification(); // process the intent which is now on the position 0
+                                }else{
+                                    audioManager.abandonAudioFocus(audioFocusChangeListener);
+                                    notification_in_process=false; // after processing all intents inside the arraylist
+                                }
+                                //
+                            }
+                        },5000);
+                    }else {
+                        textToSpeech.stop();
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                list_of_notifications.remove(0);
+                                if(!list_of_notifications.isEmpty()){
+                                    process_notification(); // process the intent which is now on the position 0
+                                }else{
+                                    audioManager.abandonAudioFocus(audioFocusChangeListener);
+                                    notification_in_process=false; // after processing all intents inside the arraylist
+                                }
+                                //
+                            }
+                        },5000);
+                    }
+                    //
+                }
+                //
+            } else {
+                // if android version is <6 // just read the message only
+                speechStatus = textToSpeech.speak("you have received  a new notification: "+ sayText, TextToSpeech.QUEUE_FLUSH, null, null);
+                while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
+                    Log.i("tts","text to speech");
+                }
+                if(!textToSpeech.isSpeaking()){
+                    handler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            list_of_notifications.remove(0);
+                            if(!list_of_notifications.isEmpty()){
+                                process_notification(); // process the intent which is now on the position 0
+                            }else{
+                                audioManager.abandonAudioFocus(audioFocusChangeListener);
+                                notification_in_process=false; // after processing all intents inside the arraylist
+                            }
+                            //
+                        }
+                    },5000);
+                }else {
+                    textToSpeech.stop();
+                    handler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            list_of_notifications.remove(0);
+                            if(!list_of_notifications.isEmpty()){
+                                process_notification(); // process the intent which is now on the position 0
+                            }else{
+                                audioManager.abandonAudioFocus(audioFocusChangeListener);
+                                notification_in_process=false; // after processing all intents inside the arraylist
+                            }
+                            //
+                        }
+                    },5000);
+                }
+                //
+            }
+
+        }else{
+            notification_in_process=false;    // this intent will be processed again when a new intent arrives  // works fine
+            //keep the intent in the arrayList
+            Toast.makeText(this, "Audio focus permission is denied", Toast.LENGTH_SHORT).show();
+        }
+        //
+
     }
 
     // to Handle the Loss of Audio Focus  // audio was playing then we lose audio focus because it is requested by another app
@@ -748,7 +924,14 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             // to prevent ANR dialog (application not responding)  // when textToSpeech is may be reading a long text or its used many times in a short period
             textToSpeech.stop();  // Interrupts the current utterance (whether played or rendered to file) and discards other utterances in the queue.
             textToSpeech.shutdown(); // Releases the resources used by the TextToSpeech engine.
-            notification_in_process=false;  // to allow the next coming intent to be processed
+            Toast.makeText(MainActivity.this, "Text to speech encountered an error", Toast.LENGTH_LONG).show();
+            Handler handler=new Handler();
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    remove_intent();
+                }
+            },10000);
         }
     };
 
@@ -890,7 +1073,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     }
     //
 
-    //
+    /*
     class Speak extends AsyncTask<Void, Void, Void> {   // to execute tasks on the worker thread
         @Override
         protected void onPreExecute() {
@@ -1026,5 +1209,5 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             }
         }
     }
-    //
+    */
 }

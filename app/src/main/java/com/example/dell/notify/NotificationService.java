@@ -10,6 +10,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Build;
@@ -21,6 +22,7 @@ import android.speech.tts.TextToSpeech;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.widget.Button;
 import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
@@ -35,9 +37,11 @@ public class NotificationService extends NotificationListenerService {
     private static final int NOTIF_ID = 1;
     private static final String NOTIF_CHANNEL_ID = "channel2";
     private TextToSpeech textToSpeech;
+    //
+    private static final String MyPREFERENCES = "MyPrefs" ;
 
     @Override
-    public void onCreate() {
+    public void onCreate() {  // when notify is allowed to access notifications
         super.onCreate();
         textToSpeech = initializeTextToSpeech();
         context = getApplicationContext();
@@ -138,7 +142,7 @@ public class NotificationService extends NotificationListenerService {
                 .setSmallIcon(R.drawable.notify_icon)
                 .setColor(getColor(R.color.projectColorCode))
                 .setContentTitle(getString(R.string.app_name))
-                .setContentText("Notify is now running in the background")
+                .setContentText("Notify is running in the background. Tap to open the app")
                 .setContentIntent(pendingIntent)
                 .build());
 
@@ -146,6 +150,16 @@ public class NotificationService extends NotificationListenerService {
             startForegroundService(new Intent(getApplicationContext(),TryService.class));
         }else{
             startService(new Intent(getApplicationContext(),TryService.class));
+        }
+        //
+        // start main activity // only if it is not running
+        boolean mainActivityIsActive=MainActivity.sharedpreferences.getBoolean("MainActivityIsActive",false); // in case sharedpreferences does not provide data the default value of this boolean we set it to false
+        if(!mainActivityIsActive){
+            Intent intent = new Intent(this, MainActivity.class);
+            startActivity(intent);
+            MainActivity mainActivity=new MainActivity();
+            Button start = mainActivity.findViewById(R.id.start_now);
+            start.performClick();
         }
         //
     }
