@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.dell.notify">
 
+    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -29,8 +30,7 @@
         <activity
             android:name=".MainActivity"
             android:persistent="true"
-            android:theme="@style/MainActivityTheme">
-        </activity>
+            android:theme="@style/MainActivityTheme" />
 
         <service
             android:name=".NotificationService"
@@ -54,13 +54,21 @@
             android:enabled="true"
             android:exported="true" />
 
-        <activity android:name=".SplashScreen" android:theme="@style/SplashScreenTheme">
+        <activity
+            android:name=".SplashScreen"
+            android:theme="@style/SplashScreenTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".ShowFragments"></activity>
+        <activity android:name=".ShowFragments" />
+
+        <service
+            android:name=".SpeakTextService"
+            android:enabled="true"
+            android:exported="true"></service>
     </application>
 
 </manifest>

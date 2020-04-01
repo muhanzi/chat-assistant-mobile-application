@@ -15,6 +15,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.provider.Telephony;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
@@ -38,8 +39,6 @@ public class NotificationService extends NotificationListenerService {
     private static final String NOTIF_CHANNEL_ID = "channel2";
     private TextToSpeech textToSpeech;
     //
-    private static final String MyPREFERENCES = "MyPrefs" ;
-
     @Override
     public void onCreate() {  // when notify is allowed to access notifications
         super.onCreate();
@@ -153,13 +152,13 @@ public class NotificationService extends NotificationListenerService {
         }
         //
         // start main activity // only if it is not running
-        boolean mainActivityIsActive=MainActivity.sharedpreferences.getBoolean("MainActivityIsActive",false); // in case sharedpreferences does not provide data the default value of this boolean we set it to false
+        SharedPreferences sharedpreferences = PreferenceManager.getDefaultSharedPreferences(context);
+        boolean mainActivityIsActive=sharedpreferences.getBoolean("MainActivityIsActive",false); // in case sharedpreferences does not provide data the default value of this boolean we set it to false
         if(!mainActivityIsActive){
             Intent intent = new Intent(this, MainActivity.class);
             startActivity(intent);
             MainActivity mainActivity=new MainActivity();
-            Button start = mainActivity.findViewById(R.id.start_now);
-            start.performClick();
+            mainActivity.startNow();
         }
         //
     }
