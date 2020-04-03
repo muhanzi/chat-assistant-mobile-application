@@ -228,7 +228,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             public void onClick(DialogInterface paramDialogInterface, int paramInt) {
                 SharedPreferences.Editor editor = sharedpreferences.edit();
                 editor.putString("mode","chatting_mode");
-                editor.apply();
+                editor.commit();
                 restart_activity();//
                 Toast.makeText(MainActivity.this, "you have just switched to Chatting mode ", Toast.LENGTH_SHORT).show();
             }
@@ -238,7 +238,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             public void onClick(DialogInterface paramDialogInterface, int paramInt) {
                 SharedPreferences.Editor editor = sharedpreferences.edit();
                 editor.putString("mode","sms_mode");
-                editor.apply();
+                editor.commit();
                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // let the screen to go off
                 restart_activity();//
                 Toast.makeText(MainActivity.this, "you have just switched to SMS mode ", Toast.LENGTH_SHORT).show();
@@ -401,7 +401,10 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     public BroadcastReceiver broadcastReceiver_for_charger_unplugged =new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            String mode=sharedpreferences.getString("mode","");
+            if(!mode.equals("chatting_mode")){
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            }
         }
     };
 
@@ -648,7 +651,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         SharedPreferences.Editor editor = sharedpreferences.edit();
         editor.putBoolean("MainActivityIsActive",false);
         editor.apply();
-        unregisterReceiver(phoneUnlockedReceiver);
     }
 
     @Override
@@ -719,6 +721,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     editor.putStringSet("pending_responses",pending_responses);  // save the set
                     editor.apply();
                     //
+                    text_to_say="your phone is locked, this message will be sent when you unlock it";
                     Speak speak=new Speak();
                     speak.execute();
                     //
@@ -739,12 +742,20 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             // reply to messenger
             if(!isPhoneLocked()){
                 sendToMessenger(response,messenger);
+            }else{
+                text_to_say="your phone is locked, please switch to chatting mode to enable notify to send your response to messenger";
+                Speak speak=new Speak();
+                speak.execute();
             }
             //
         }else if(packageName.equals(messenger_lite)){
             // reply to messenger lite
             if(!isPhoneLocked()){
                 sendToMessenger(response,messenger_lite);
+            }else{
+                text_to_say="your phone is locked, please switch to chatting mode to enable notify to send your response to messenger lite";
+                Speak speak=new Speak();
+                speak.execute();
             }
             //
         }else {
@@ -1157,7 +1168,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
         @Override
         protected Void doInBackground(Void... voids) {
-            int speechStatus = textToSpeech.speak("your phone is locked, this message will be sent when you unlock it", TextToSpeech.QUEUE_FLUSH, null, null);
+            int speechStatus = textToSpeech.speak(text_to_say, TextToSpeech.QUEUE_FLUSH, null, null);
             //
             while(textToSpeech.isSpeaking()){
                 Log.i("tts","text to speech");
