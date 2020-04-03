@@ -19,4 +19,5 @@
     <string name="notify_is_running">Notify is running</string>
     <string name="your_personal_chat_assistant">Your personal chat Assistant</string>
     <string name="home">home</string>
+    <string name="change_mode">Change mode</string>
 </resources>

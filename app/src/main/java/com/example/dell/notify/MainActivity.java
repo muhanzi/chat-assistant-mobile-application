@@ -11,6 +11,7 @@ import android.app.job.JobInfo;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -25,7 +26,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Messenger;
-import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.provider.ContactsContract;
 import android.provider.Settings;
@@ -40,6 +40,7 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.telephony.SmsManager;
@@ -47,13 +48,14 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 
 public class MainActivity extends AppCompatActivity implements RecognitionListener{
@@ -97,8 +99,10 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     //
     private String text_to_say="";
     //
-    private static final String MyPREFERENCES = "MyPrefs" ;
     private SharedPreferences sharedpreferences; // stores data in a file
+    private Set<String> pending_responses;
+    //
+    private KeyguardManager keyguardManager;
     //
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,7 +114,9 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         getSupportActionBar().setTitle(R.string.appBarTitle);
         //
         //check if device is charging
-        if(check_if_device_is_charging()){
+        sharedpreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        String mode=sharedpreferences.getString("mode","");
+        if(check_if_device_is_charging() || mode.equals("chatting_mode")){
             // when phone is charging keep the screen on
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
@@ -146,6 +152,11 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         createNotificationChannel();
         LocalBroadcastManager.getInstance(this).registerReceiver(onNotice, new IntentFilter("Msg"));
         LocalBroadcastManager.getInstance(this).registerReceiver(onFinishSpeaking, new IntentFilter("Speaking"));
+        // broadcast when user unlock his phone
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_USER_PRESENT);
+        registerReceiver(phoneUnlockedReceiver, filter);
+        //
         if(checkNotificationEnabled()){
             showNotification();  // Know that a notification can be shown even without the "Notification listener" permission
         }
@@ -153,10 +164,12 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         check_permissions();
         register_broadcasts_for_power_connection();
         //
-        sharedpreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        pending_responses=new HashSet<>();
         SharedPreferences.Editor editor = sharedpreferences.edit();
         editor.putBoolean("turn_on_notify",true);
         editor.commit();
+        //
+        keyguardManager = (KeyguardManager) this.getSystemService(Context.KEYGUARD_SERVICE);
         //
         button_start_now.setOnClickListener(new View.OnClickListener() {  // after enabling notification listener in the settings
             @Override
@@ -165,6 +178,8 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             }
         });
     }
+
+    private BroadcastReceiver phoneUnlockedReceiver = new PhoneUnlockedBroadcastReceiver();
 
     // the appmenu
     @Override
@@ -182,20 +197,74 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 //                startActivity(settings);
                 return true;
             case R.id.itemTurnOff:
-                // Turn Notify off
-                SharedPreferences.Editor editor = sharedpreferences.edit();
-                editor.putBoolean("turn_on_notify",false);
-                editor.commit();
-                button_start_now.setText(R.string.start_now);
-                button_start_now.setEnabled(true);
-                notification_in_process=false;// processing is stopped
+                turnOffNotify();
                 return true;
             case R.id.itemReportedSpams:
                 // open activity to see all reported spams
                 return true;
+            case R.id.itemChangeMode:
+                change_mode();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    private void change_mode(){
+        String mode=sharedpreferences.getString("mode","");
+        String message;
+        if(mode.equals("chatting_mode")){
+            message="you are currently using CHATTING mode";
+        }else if(mode.equals("sms_mode")){
+            message="you are currently using SMS mode";
+        }else{
+            message="no mode is chosen yet";
+        }
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this);
+        dialog.setTitle("Change Mode ?");
+        dialog.setMessage(message);
+        dialog.setPositiveButton("chatting mode", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface paramDialogInterface, int paramInt) {
+                SharedPreferences.Editor editor = sharedpreferences.edit();
+                editor.putString("mode","chatting_mode");
+                editor.apply();
+                restart_activity();//
+                Toast.makeText(MainActivity.this, "you have just switched to Chatting mode ", Toast.LENGTH_SHORT).show();
+            }
+        });
+        dialog.setNegativeButton("sms mode", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface paramDialogInterface, int paramInt) {
+                SharedPreferences.Editor editor = sharedpreferences.edit();
+                editor.putString("mode","sms_mode");
+                editor.apply();
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // let the screen to go off
+                restart_activity();//
+                Toast.makeText(MainActivity.this, "you have just switched to SMS mode ", Toast.LENGTH_SHORT).show();
+            }
+        });
+        dialog.show();
+    }
+
+    private void restart_activity(){
+        finish();
+        overridePendingTransition(0, 0);
+        startActivity(getIntent());
+        overridePendingTransition(0, 0);
+    }
+
+    private void turnOffNotify(){
+        // Turn Notify off
+        SharedPreferences.Editor editor = sharedpreferences.edit();
+        editor.putBoolean("turn_on_notify",false);
+        editor.apply();  // will save it in the background
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        // if it crashes again we put here delay of 5 seconds
+        button_start_now.setText(R.string.start_now);
+        button_start_now.setEnabled(true);
+        //
+        notification_in_process=false;// processing is stopped
     }
     //
 
@@ -203,7 +272,8 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     protected void onResume() {
         super.onResume();
         //check if device is charging
-        if(check_if_device_is_charging()){
+        String mode=sharedpreferences.getString("mode","");
+        if(check_if_device_is_charging() || mode.equals("chatting_mode")){
             // when phone is charging keep the screen on
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
@@ -214,7 +284,8 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     protected void onStart() {
         super.onStart();
         //check if device is charging
-        if(check_if_device_is_charging()){
+        String mode=sharedpreferences.getString("mode","");
+        if(check_if_device_is_charging() || mode.equals("chatting_mode")){
             // when phone is charging keep the screen on
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
@@ -246,7 +317,8 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     protected void onRestart() {
         super.onRestart();
         //check if device is charging
-        if(check_if_device_is_charging()){
+        String mode=sharedpreferences.getString("mode","");
+        if(check_if_device_is_charging() || mode.equals("chatting_mode")){
             // when phone is charging keep the screen on
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
@@ -257,9 +329,12 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         if(checkNotificationEnabled()){
             //
             // Turn Notify on  // in case user turned it off
-            SharedPreferences.Editor editor = sharedpreferences.edit();
-            editor.putBoolean("turn_on_notify",true);
-            editor.commit();
+            boolean turn_on_notify=sharedpreferences.getBoolean("turn_on_notify",true);
+            if(!turn_on_notify){
+                SharedPreferences.Editor editor = sharedpreferences.edit();
+                editor.putBoolean("turn_on_notify",true);
+                editor.apply();
+            }
             if(!list_of_notifications.isEmpty()){
                 list_of_notifications.clear();  // starting afresh // to avoid endless notifications like during phone call or when downloading
             }
@@ -302,10 +377,10 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     private void register_broadcasts_for_power_connection(){
         // register broadcast receiver for phone charger plugged in
         IntentFilter filter = new IntentFilter(Intent.ACTION_POWER_CONNECTED);
-        getApplicationContext().registerReceiver(broadcastReceiver_for_charger_plugged, filter);
+        registerReceiver(broadcastReceiver_for_charger_plugged, filter);
         // register broadcast receiver for phone charger plugged in
         IntentFilter intentFilter = new IntentFilter(Intent.ACTION_POWER_DISCONNECTED);
-        getApplicationContext().registerReceiver(broadcastReceiver_for_charger_unplugged, intentFilter);
+        registerReceiver(broadcastReceiver_for_charger_unplugged, intentFilter);
     }
 
     private BroadcastReceiver broadcastReceiver_for_charger_plugged =new BroadcastReceiver() {
@@ -323,6 +398,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     };
 
     public void sendSMSText(String message){
+        // the number can be of any format as long as it is valid // can start with 0,+country code,...
         SmsManager smsManager = SmsManager.getDefault();
         smsManager.sendTextMessage(sms_to_phone_number, null, message, null, null);
         //
@@ -487,16 +563,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             textToSpeech = initializeTextToSpeech();
             textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
         }
-        //
-//        try{
-//            KeyguardManager km = (KeyguardManager) this.getSystemService(Context.KEYGUARD_SERVICE);
-//            if(km.isDeviceLocked() || km.isKeyguardLocked() || km.inKeyguardRestrictedInputMode()){
-//                unlockDevice();
-//            }
-//        }catch(NullPointerException ex){
-//            Log.e("exception","NullPointer");
-//        }
-        //
         final Intent intent=new Intent(Intent.ACTION_VOICE_COMMAND);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
@@ -518,9 +584,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                           }else{
                               audioManager.abandonAudioFocus(audioFocusChangeListener);
                               notification_in_process=false; // after processing all intents inside the arraylist
-                              if(!check_if_device_is_charging()){ // if phone is charging we don't want to turn screen off
-                                  getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                              }
                           }
                       }
                   },80000); // give google assistant 120 seconds to process
@@ -529,31 +592,61 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         },3000); // 2 secs// just wait for google assistant to get ready
     }
 
-    private void unlockDevice(){
-        // if phone was locked // unlock it
-        try{
-            PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
-            PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP,"INFO");
-            wl.acquire(10*60*1000L /*10 minutes*/);  // release the wakelock after 10 minutes // to protect user's battery
-        }catch(NullPointerException ex){
-            Log.e("exception","NullPointer");
-        }
-        // put this we a value saved in shared preferences // mode is set to "chattingmode"
-        Window winManager = getWindow();
-        winManager.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
-        winManager.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
-        winManager.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
-        winManager.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    private void sendToMessenger(String message,String messengerPackageName){
+        Handler handler=new Handler();
+        Intent sendIntent = new Intent();
+        sendIntent.setAction(Intent.ACTION_SEND);
+        sendIntent.putExtra(Intent.EXTRA_TEXT, message);
+        sendIntent.setType("text/plain");
+        sendIntent.setPackage(messengerPackageName);
+        startActivity(sendIntent);
         //
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                // move the app to the foreground
+                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
+                //
+                try {
+                    list_of_notifications.remove(0);
+                    if(!list_of_notifications.isEmpty()){
+                        process_notification(); // process the intent which is now on the position 0
+                    }else{
+                        audioManager.abandonAudioFocus(audioFocusChangeListener);
+                        notification_in_process=false; // after processing all intents inside the arraylist
+                    }
+                }catch (Exception ex){
+                    Log.e("Exception","error occurred");
+                }
+            }
+        },30000);  // after 30 seconds process next intent
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        // when the activity is killed
+        // when the activity is killed // buy user or by android system
         SharedPreferences.Editor editor = sharedpreferences.edit();
         editor.putBoolean("MainActivityIsActive",false);
         editor.commit();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // when user quits the app // or another higher priority app requires memory, android system stops the activity
+        SharedPreferences.Editor editor = sharedpreferences.edit();
+        editor.putBoolean("MainActivityIsActive",false);
+        editor.apply();
+        unregisterReceiver(phoneUnlockedReceiver);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(phoneUnlockedReceiver);
     }
 
     // for RegisterListener Interface
@@ -605,44 +698,46 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         ArrayList result = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
         String response=result.get(0).toString();
         Handler handler=new Handler();
+        String mode=sharedpreferences.getString("mode","");
         if(packageName.equals(whatsapp_package_name)){
-            //openWhatsApp(response); //
-            send_message_on_whatsapp(response);
+            if(isPhoneLocked()){
+                if(mode.equals("sms_mode")){
+                    sendSMSMessage(response); // send sms
+                }else{
+                    // either in chatting mode // or no mode // user has not activated any mode
+                    //
+                    SharedPreferences.Editor editor = sharedpreferences.edit();
+                    pending_responses.add("send whatsapp message to"+title+"  "+response);  // add response to the set
+                    editor.putStringSet("pending_responses",pending_responses);  // save the set
+                    editor.apply();
+                    //
+                    Speak speak=new Speak();
+                    speak.execute();
+                    //
+                    // save the message in a set of strings inside shared preferences // when phone is unlocked it will send these messages
+                }
+            }else{
+                if(mode.equals("sms_mode")){
+                    sendSMSMessage(response); // send sms
+                }else{
+                    // either in chatting mode // or no mode // user has not activated any mode
+                    send_message_on_whatsapp(response);// send directly to whatsapp
+                }
+            }
+            //
         }else if(packageName.equals(sms_package_name)){
             sendSMSMessage(response); //
         }else if(packageName.equals(messenger)){
-            // reply to messenger  // using intent
-            //
-            // then remove the intent cause its processing is done
-            handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    list_of_notifications.remove(0);
-                    if(!list_of_notifications.isEmpty()){
-                        process_notification(); // process the intent which is now on the position 0
-                    }else{
-                        audioManager.abandonAudioFocus(audioFocusChangeListener);
-                        notification_in_process=false; // after processing all intents inside the arraylist
-                    }
-                }
-            },5000);
+            // reply to messenger
+            if(!isPhoneLocked()){
+                sendToMessenger(response,messenger);
+            }
             //
         }else if(packageName.equals(messenger_lite)){
             // reply to messenger lite
-            //
-            // then remove the intent cause its processing is done
-            handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    list_of_notifications.remove(0);
-                    if(!list_of_notifications.isEmpty()){
-                        process_notification(); // process the intent which is now on the position 0
-                    }else{
-                        audioManager.abandonAudioFocus(audioFocusChangeListener);
-                        notification_in_process=false; // after processing all intents inside the arraylist
-                    }
-                }
-            },5000);
+            if(!isPhoneLocked()){
+                sendToMessenger(response,messenger_lite);
+            }
             //
         }else {
             //proceed with next intent in the list
@@ -667,6 +762,10 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
     }
     // ------ end -------
+
+    private boolean isPhoneLocked(){
+        return keyguardManager.isDeviceLocked() || keyguardManager.isKeyguardLocked() || keyguardManager.inKeyguardRestrictedInputMode();
+    }
 
     private void remove_intent(){
         list_of_notifications.remove(0);
@@ -704,43 +803,47 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         }
 
         if(request_audio_focus()) {
-            // Notification in process
-            notification_in_process = true;
-            //
-            contact_name = "";  // the contact name must be fetched every time we process message //intent
-            Intent intent = list_of_notifications.get(0);
-            packageName = intent.getStringExtra("package");
-            title = intent.getStringExtra("title");
-            String text = intent.getStringExtra("text");
-            String ticker = intent.getStringExtra("ticker");
-            int id = intent.getIntExtra("icon", 0);  // see the rest of the code in case we need the icon of the notification
-            String sayText = title + " " + text;
-            //Toast.makeText(this, "The ticker text is: " + ticker, Toast.LENGTH_LONG).show(); // ticker // has the same value as the title
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                // Notification in process
+                notification_in_process = true;
                 //
-                if(packageName.equals(whatsapp_package_name) || packageName.equals(sms_package_name)){
-                    Intent speakService=  new Intent(this, SpeakTextService.class);
-                    speakService.putExtra("textToSay","you have received  a new message from"+ sayText);
-                    startService(speakService);
-                }else if(packageName.equals(messenger) || packageName.equals(messenger_lite)){
-                    if(title.equalsIgnoreCase("chat heads active")){
-                        return;
+                contact_name = "";  // the contact name must be fetched every time we process message //intent
+                Intent intent = list_of_notifications.get(0);
+                packageName = intent.getStringExtra("package");
+                title = intent.getStringExtra("title");
+                String text = intent.getStringExtra("text");
+                String ticker = intent.getStringExtra("ticker");
+                int id = intent.getIntExtra("icon", 0);  // see the rest of the code in case we need the icon of the notification
+                String sayText = title + " " + text;
+                //Toast.makeText(this, "The ticker text is: " + ticker, Toast.LENGTH_LONG).show(); // ticker // has the same value as the title
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    //
+                    if(packageName.equals(whatsapp_package_name) || packageName.equals(sms_package_name)){
+                        Intent speakService=  new Intent(this, SpeakTextService.class);
+                        speakService.putExtra("textToSay","you have received  a new message from"+ sayText);
+                        startService(speakService);
+                    }else if(packageName.equals(messenger) || packageName.equals(messenger_lite)){
+                        if(title.equalsIgnoreCase("chat heads active")){
+                            return;
+                        }
+                        Intent speakService=  new Intent(this, SpeakTextService.class);
+                        speakService.putExtra("textToSay","you have received  a new message from"+ sayText);
+                        startService(speakService);
+                    }else{
+                        // package name does not require any response // we don't provide response for other apps like browsers,...
+                        Intent speakService=  new Intent(this, SpeakTextService.class);
+                        speakService.putExtra("textToSay","you have received  a new notification: "+ sayText);
+                        startService(speakService);
                     }
-                    Intent speakService=  new Intent(this, SpeakTextService.class);
-                    speakService.putExtra("textToSay","you have received  a new message from"+ sayText);
-                    startService(speakService);
-                }else{
-                    // package name does not require any response // we don't provide response for other apps like browsers,...
+                    //
+                } else {
+                    // if android version is <6 // just read the message only
                     Intent speakService=  new Intent(this, SpeakTextService.class);
                     speakService.putExtra("textToSay","you have received  a new notification: "+ sayText);
                     startService(speakService);
                 }
-                //
-            } else {
-                // if android version is <6 // just read the message only
-                Intent speakService=  new Intent(this, SpeakTextService.class);
-                speakService.putExtra("textToSay","you have received  a new notification: "+ sayText);
-                startService(speakService);
+            }catch (Exception ex){
+                Log.e("Exception","an error occurred");
             }
         }else{
             notification_in_process=false;    // this intent will be processed again when a new intent arrives  // works fine
@@ -977,6 +1080,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                             //String id = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID));
                             contact_name = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
                             sms_to_phone_number = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
+                            sms_to_phone_number=sms_to_phone_number.replaceAll("\\s",""); // remove all spaces
                         }
                     }
                 }
@@ -1005,8 +1109,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 }
             }else if(contact_name.equals("") && packageName.equals(sms_package_name)){
                 // in case of a new number // unknown number
-                sms_to_phone_number=title.replaceAll("\\s",""); // remove all spaces
-                sms_to_phone_number=sms_to_phone_number.replace("+","");
                 if(textToSpeech != null && sms_to_phone_number.length() >= 10){
                     int speechStatus = textToSpeech.speak(" if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
                     while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
@@ -1038,5 +1140,58 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         }
     }
     //
+
+    class Speak extends AsyncTask<Void, Void, Void> {   // to execute tasks on the worker thread
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            int speechStatus = textToSpeech.speak("your phone is locked, this message will be sent when you unlock it", TextToSpeech.QUEUE_FLUSH, null, null);
+            //
+            while(textToSpeech.isSpeaking()){
+                Log.i("tts","text to speech");
+            }
+            //
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+            //
+            Handler handler=new Handler();
+            if(!textToSpeech.isSpeaking()) {
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        list_of_notifications.remove(0);
+                        if(!list_of_notifications.isEmpty()){
+                            process_notification(); // process the intent which is now on the position 0
+                        }else{
+                            audioManager.abandonAudioFocus(audioFocusChangeListener);
+                            notification_in_process=false; // after processing all intents inside the arraylist
+                        }
+                    }
+                },5000);
+            }else{
+                textToSpeech.stop();
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        list_of_notifications.remove(0);
+                        if(!list_of_notifications.isEmpty()){
+                            process_notification(); // process the intent which is now on the position 0
+                        }else{
+                            audioManager.abandonAudioFocus(audioFocusChangeListener);
+                            notification_in_process=false; // after processing all intents inside the arraylist
+                        }
+                    }
+                },5000);
+            }
+        }
+    }
 
 }

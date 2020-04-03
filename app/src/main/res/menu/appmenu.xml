@@ -9,4 +9,7 @@
         android:id="@+id/itemTurnOff" />
     <item android:title="@string/reported_spams"
         android:id="@+id/itemReportedSpams" />
+    <item
+        android:id="@+id/itemChangeMode"
+        android:title="@string/change_mode" />
 </menu>

@@ -31,7 +31,16 @@
             android:name=".MainActivity"
             android:persistent="true"
             android:theme="@style/MainActivityTheme" />
+        <activity
+            android:name=".SplashScreen"
+            android:theme="@style/SplashScreenTheme">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
 
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".ShowFragments" />
         <service
             android:name=".NotificationService"
             android:label="@string/app_name"
@@ -53,22 +62,20 @@
             android:name=".ServiceWithAlarmManager"
             android:enabled="true"
             android:exported="true" />
-
-        <activity
-            android:name=".SplashScreen"
-            android:theme="@style/SplashScreenTheme">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity android:name=".ShowFragments" />
-
         <service
             android:name=".SpeakTextService"
             android:enabled="true"
             android:exported="true"></service>
+        <!--
+        <receiver
+            android:name=".PhoneUnlockedBroadcastReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.USER_PRESENT" />
+            </intent-filter>
+        </receiver>
+        -->
     </application>
 
 </manifest>
