@@ -278,6 +278,10 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
         //
+        // broadcast when user unlock his phone
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_USER_PRESENT);
+        registerReceiver(phoneUnlockedReceiver, filter);
     }
 
     @Override
@@ -310,7 +314,11 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         //
         SharedPreferences.Editor editor = sharedpreferences.edit();
         editor.putBoolean("MainActivityIsActive",true);
-        editor.commit();
+        editor.apply();
+        // broadcast when user unlock his phone
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_USER_PRESENT);
+        registerReceiver(phoneUnlockedReceiver, filter);
     }
 
     @Override
