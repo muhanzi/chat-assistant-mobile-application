@@ -189,21 +189,25 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                     handler.postDelayed(new Runnable() {
                         @Override
                         public void run() {
-                            pending_list.remove(0);
-                            if(!pending_list.isEmpty()){
-                                send_message_on_whatsapp();
-                            }else{
-                                // abandon audio focus
-                                audioManager.abandonAudioFocus(audioFocusChangeListener);
-                                SharedPreferences.Editor editor = sharedpreferences.edit();
-                                editor.remove("pending_responses");
-                                editor.apply();
-                                //
-                                SharedPreferences.Editor editor2 = sharedpreferences.edit();
-                                editor2.putBoolean("turn_on_notify",true);
-                                editor2.putBoolean("handling_pending_responses",false);
-                                editor2.apply();
-                                bring_main_activity_to_foreground();
+                            try{
+                                pending_list.remove(0);
+                                if(!pending_list.isEmpty()){
+                                    send_message_on_whatsapp();
+                                }else{
+                                    // abandon audio focus
+                                    audioManager.abandonAudioFocus(audioFocusChangeListener);
+                                    SharedPreferences.Editor editor = sharedpreferences.edit();
+                                    editor.remove("pending_responses");
+                                    editor.apply();
+                                    //
+                                    SharedPreferences.Editor editor2 = sharedpreferences.edit();
+                                    editor2.putBoolean("turn_on_notify",true);
+                                    editor2.putBoolean("handling_pending_responses",false);
+                                    editor2.apply();
+                                    bring_main_activity_to_foreground();
+                                }
+                            }catch(IndexOutOfBoundsException ex){
+                                Log.e("Exception","IndexOutOfBoundsException ");
                             }
                     }
                     },80000);
@@ -212,21 +216,25 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                     handler.postDelayed(new Runnable() {
                         @Override
                         public void run() {
-                            pending_list.remove(0);
-                            if(!pending_list.isEmpty()){
-                                send_message_on_whatsapp();
-                            }else{
-                                // abandon audio focus
-                                audioManager.abandonAudioFocus(audioFocusChangeListener);
-                                SharedPreferences.Editor editor = sharedpreferences.edit();
-                                editor.remove("pending_responses");
-                                editor.apply();
-                                //
-                                SharedPreferences.Editor editor2 = sharedpreferences.edit();
-                                editor2.putBoolean("turn_on_notify",true);
-                                editor2.putBoolean("handling_pending_responses",false);
-                                editor2.apply();
-                                bring_main_activity_to_foreground();
+                            try{
+                                pending_list.remove(0);
+                                if(!pending_list.isEmpty()){
+                                    send_message_on_whatsapp();
+                                }else{
+                                    // abandon audio focus
+                                    audioManager.abandonAudioFocus(audioFocusChangeListener);
+                                    SharedPreferences.Editor editor = sharedpreferences.edit();
+                                    editor.remove("pending_responses");
+                                    editor.apply();
+                                    //
+                                    SharedPreferences.Editor editor2 = sharedpreferences.edit();
+                                    editor2.putBoolean("turn_on_notify",true);
+                                    editor2.putBoolean("handling_pending_responses",false);
+                                    editor2.apply();
+                                    bring_main_activity_to_foreground();
+                                }
+                            }catch(IndexOutOfBoundsException ex){
+                                Log.e("Exception","IndexOutOfBoundsException ");
                             }
                         }
                     },80000);

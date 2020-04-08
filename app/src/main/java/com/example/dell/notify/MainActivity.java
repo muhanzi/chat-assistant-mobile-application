@@ -407,12 +407,16 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             handler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    list_of_notifications.remove(0);
-                    if(!list_of_notifications.isEmpty()){
-                        process_notification(); // process the intent which is now on the position 0
-                    }else{
-                        audioManager.abandonAudioFocus(audioFocusChangeListener);
-                        notification_in_process=false; // after processing all intents inside the arraylist
+                    try{
+                        list_of_notifications.remove(0);
+                        if(!list_of_notifications.isEmpty()){
+                            process_notification(); // process the intent which is now on the position 0
+                        }else{
+                            audioManager.abandonAudioFocus(audioFocusChangeListener);
+                            notification_in_process=false; // after processing all intents inside the arraylist
+                        }
+                    }catch (IndexOutOfBoundsException ex){
+                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
                     }
                 }
             },5000); // after 5 seconds proceed with next intent
@@ -449,12 +453,16 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 } else {
                     Toast.makeText(getApplicationContext(),"SMS failed, please try again.", Toast.LENGTH_LONG).show();
                     //
-                    list_of_notifications.remove(0);
-                    if(!list_of_notifications.isEmpty()){
-                        process_notification(); // process the intent which is now on the position 0
-                    }else{
-                        audioManager.abandonAudioFocus(audioFocusChangeListener);
-                        notification_in_process=false; // after processing all intents inside the arraylist
+                    try{
+                        list_of_notifications.remove(0);
+                        if(!list_of_notifications.isEmpty()){
+                            process_notification(); // process the intent which is now on the position 0
+                        }else{
+                            audioManager.abandonAudioFocus(audioFocusChangeListener);
+                            notification_in_process=false; // after processing all intents inside the arraylist
+                        }
+                    }catch (IndexOutOfBoundsException ex){
+                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
                     }
                     //
                 }
@@ -466,12 +474,16 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 }else{
                     Toast.makeText(this, "permission to record audio is denied", Toast.LENGTH_SHORT).show();
                     //
-                    list_of_notifications.remove(0);
-                    if(!list_of_notifications.isEmpty()){
-                        process_notification(); // process the intent which is now on the position 0
-                    }else{
-                        audioManager.abandonAudioFocus(audioFocusChangeListener);
-                        notification_in_process=false; // after processing all intents inside the arraylist
+                    try{
+                        list_of_notifications.remove(0);
+                        if(!list_of_notifications.isEmpty()){
+                            process_notification(); // process the intent which is now on the position 0
+                        }else{
+                            audioManager.abandonAudioFocus(audioFocusChangeListener);
+                            notification_in_process=false; // after processing all intents inside the arraylist
+                        }
+                    }catch (IndexOutOfBoundsException ex){
+                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
                     }
                     //
                 }
@@ -484,12 +496,16 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 }else{
                     Toast.makeText(getApplicationContext(),"Notify is denied access to phone contacts", Toast.LENGTH_LONG).show();
                     //
-                    list_of_notifications.remove(0);
-                    if(!list_of_notifications.isEmpty()){
-                        process_notification(); // process the intent which is now on the position 0
-                    }else{
-                        audioManager.abandonAudioFocus(audioFocusChangeListener);
-                        notification_in_process=false; // after processing all intents inside the arraylist
+                    try{
+                        list_of_notifications.remove(0);
+                        if(!list_of_notifications.isEmpty()){
+                            process_notification(); // process the intent which is now on the position 0
+                        }else{
+                            audioManager.abandonAudioFocus(audioFocusChangeListener);
+                            notification_in_process=false; // after processing all intents inside the arraylist
+                        }
+                    }catch (IndexOutOfBoundsException ex){
+                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
                     }
                     //
                 }
@@ -553,12 +569,16 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                           // bring MainActivity to the foreground // so that notification service stays alive
                           bring_main_activity_to_foreground();
                           //
-                          list_of_notifications.remove(0);
-                          if(!list_of_notifications.isEmpty()){
-                              process_notification(); // process the intent which is now on the position 0
-                          }else{
-                              audioManager.abandonAudioFocus(audioFocusChangeListener);
-                              notification_in_process=false; // after processing all intents inside the arraylist
+                          try{
+                              list_of_notifications.remove(0);
+                              if(!list_of_notifications.isEmpty()){
+                                  process_notification(); // process the intent which is now on the position 0
+                              }else{
+                                  audioManager.abandonAudioFocus(audioFocusChangeListener);
+                                  notification_in_process=false; // after processing all intents inside the arraylist
+                              }
+                          }catch (IndexOutOfBoundsException ex){
+                              Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
                           }
                       }
                   },80000); // give google assistant 80 seconds to process
@@ -609,12 +629,16 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                list_of_notifications.remove(0);
-                if(!list_of_notifications.isEmpty()){
-                    process_notification(); // process the intent which is now on the position 0
-                }else{
-                    audioManager.abandonAudioFocus(audioFocusChangeListener);
-                    notification_in_process=false; // after processing all intents inside the arraylist
+                try{
+                    list_of_notifications.remove(0);
+                    if(!list_of_notifications.isEmpty()){
+                        process_notification(); // process the intent which is now on the position 0
+                    }else{
+                        audioManager.abandonAudioFocus(audioFocusChangeListener);
+                        notification_in_process=false; // after processing all intents inside the arraylist
+                    }
+                }catch (IndexOutOfBoundsException ex){
+                    Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
                 }
             }
         },5000);
@@ -680,12 +704,16 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             //
         }else{
             //proceed with next intent in the list
-            list_of_notifications.remove(0);
-            if(!list_of_notifications.isEmpty()){
-                process_notification(); // process the intent which is now on the position 0
-            }else{
-                audioManager.abandonAudioFocus(audioFocusChangeListener);
-                notification_in_process=false; // after processing all intents inside the arraylist
+            try{
+                list_of_notifications.remove(0);
+                if(!list_of_notifications.isEmpty()){
+                    process_notification(); // process the intent which is now on the position 0
+                }else{
+                    audioManager.abandonAudioFocus(audioFocusChangeListener);
+                    notification_in_process=false; // after processing all intents inside the arraylist
+                }
+            }catch (IndexOutOfBoundsException ex){
+                Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
             }
             //
         }
@@ -703,12 +731,16 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     // ------ end -------
 
     private void remove_intent(){
-        list_of_notifications.remove(0);
-        if(!list_of_notifications.isEmpty()){
-            process_notification(); // process the intent which is now on the position 0
-        }else{
-            audioManager.abandonAudioFocus(audioFocusChangeListener);
-            notification_in_process=false; // after processing all intents inside the arraylist
+        try{
+            list_of_notifications.remove(0);
+            if(!list_of_notifications.isEmpty()){
+                process_notification(); // process the intent which is now on the position 0
+            }else{
+                audioManager.abandonAudioFocus(audioFocusChangeListener);
+                notification_in_process=false; // after processing all intents inside the arraylist
+            }
+        }catch (IndexOutOfBoundsException ex){
+            Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
         }
         //
     }
@@ -1078,12 +1110,16 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                list_of_notifications.remove(0);
-                if(!list_of_notifications.isEmpty()){
-                    process_notification(); // process the intent which is now on the position 0
-                }else{
-                    audioManager.abandonAudioFocus(audioFocusChangeListener);
-                    notification_in_process=false; // after processing all intents inside the arraylist
+                try{
+                    list_of_notifications.remove(0);
+                    if(!list_of_notifications.isEmpty()){
+                        process_notification(); // process the intent which is now on the position 0
+                    }else{
+                        audioManager.abandonAudioFocus(audioFocusChangeListener);
+                        notification_in_process=false; // after processing all intents inside the arraylist
+                    }
+                }catch (IndexOutOfBoundsException ex){
+                    Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
                 }
                 //
             }
@@ -1148,12 +1184,16 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 handler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        list_of_notifications.remove(0);
-                        if(!list_of_notifications.isEmpty()){
-                            process_notification(); // process the intent which is now on the position 0
-                        }else{
-                            audioManager.abandonAudioFocus(audioFocusChangeListener);
-                            notification_in_process=false; // after processing all intents inside the arraylist
+                        try{
+                            list_of_notifications.remove(0);
+                            if(!list_of_notifications.isEmpty()){
+                                process_notification(); // process the intent which is now on the position 0
+                            }else{
+                                audioManager.abandonAudioFocus(audioFocusChangeListener);
+                                notification_in_process=false; // after processing all intents inside the arraylist
+                            }
+                        }catch (IndexOutOfBoundsException ex){
+                            Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
                         }
                     }
                 },5000);
@@ -1162,12 +1202,16 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 handler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        list_of_notifications.remove(0);
-                        if(!list_of_notifications.isEmpty()){
-                            process_notification(); // process the intent which is now on the position 0
-                        }else{
-                            audioManager.abandonAudioFocus(audioFocusChangeListener);
-                            notification_in_process=false; // after processing all intents inside the arraylist
+                        try{
+                            list_of_notifications.remove(0);
+                            if(!list_of_notifications.isEmpty()){
+                                process_notification(); // process the intent which is now on the position 0
+                            }else{
+                                audioManager.abandonAudioFocus(audioFocusChangeListener);
+                                notification_in_process=false; // after processing all intents inside the arraylist
+                            }
+                        }catch (IndexOutOfBoundsException ex){
+                            Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
                         }
                     }
                 },5000);
@@ -1200,8 +1244,8 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                         audioManager.abandonAudioFocus(audioFocusChangeListener);
                         notification_in_process=false; // after processing all intents inside the arraylist
                     }
-                }catch (Exception ex){
-                    Log.e("Exception","error occurred");
+                }catch (IndexOutOfBoundsException ex){
+                    Log.e("Exception","IndexOutOfBoundsException error occurred");
                 }
             }
         },30000);  // after 30 seconds process next intent
