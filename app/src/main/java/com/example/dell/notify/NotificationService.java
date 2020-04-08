@@ -78,18 +78,26 @@ public class NotificationService extends NotificationListenerService {
         msgrcv.putExtra("ticker", ticker);
         msgrcv.putExtra("title", title);
         msgrcv.putExtra("text", text);
+        //
         if(id != null) {
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
             id.compress(Bitmap.CompressFormat.PNG, 100, stream);
             byte[] byteArray = stream.toByteArray();
             msgrcv.putExtra("icon",byteArray);
         }
-        if(packageName.equals("android") || packageName.equals("com.example.dell.notify")){
+        //
+        String sms_package_name=Telephony.Sms.getDefaultSmsPackage(context);
+        if(packageName.equals("android") || packageName.equals("com.example.dell.notify") || packageName.equals(sms_package_name)){
             return;
         }
+        if(packageName.equals("com.facebook.orca") || packageName.equals("com.facebook.mlite")){
+            if(title != null && title.equals("chat heads active")){
+                return;
+            }
+        }
         LocalBroadcastManager.getInstance(context).sendBroadcast(msgrcv);
-        // remove the notification from the status bar if app is sms or whatsapp // to avoid the issue of like "2 messages from this person"
-        if(packageName.equals(Telephony.Sms.getDefaultSmsPackage(this)) || packageName.equals("com.whatsapp"))
+        // remove the notification from the status bar if app is sms or whatsapp // to avoid the issue of like "2 messages from this person"  // this makes it easy to read messages from whatsapp groups // because whatsapp will be posting them
+        if(packageName.equals("com.whatsapp"))
             cancelNotification(sbn.getKey());
     }
 
@@ -111,15 +119,7 @@ public class NotificationService extends NotificationListenerService {
         for(StatusBarNotification noti : sbn){
             String packageName = noti.getPackageName();
             Bundle extras = noti.getNotification().extras;
-            String title = extras.getString("android.title");
-            String text;
-            if(extras.getCharSequence("android.text") != null){
-                text = extras.getCharSequence("android.text").toString();
-            }else{
-                text="message is empty";
-            }
-            //function to say the text // text to speech
-            //say_the_text("New"+packageName+" Message: "+title+" "+text);  // will read only the earliest notification on the status bar // means only sbn[0]
+
             say_the_text("Notify is now running in the background");
             //
         }
@@ -153,12 +153,12 @@ public class NotificationService extends NotificationListenerService {
         //
         // start main activity // only if it is not running
         SharedPreferences sharedpreferences = PreferenceManager.getDefaultSharedPreferences(context);
-        boolean mainActivityIsActive=sharedpreferences.getBoolean("MainActivityIsActive",false); // in case sharedpreferences does not provide data the default value of this boolean we set it to false
+        boolean mainActivityIsActive=sharedpreferences.getBoolean("MainActivityIsActive",true); // in case sharedpreferences does not provide data, the default value of this boolean we set it to false // we assume that the activity is running
         if(!mainActivityIsActive){
-            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+            Intent intent = new Intent(this, MainActivity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP);
             startActivity(intent);
-            MainActivity mainActivity=new MainActivity();
+            MainActivity mainActivity = MainActivity.instance;
             mainActivity.startNow();
         }
         //

@@ -53,6 +53,7 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
             SharedPreferences.Editor editor = sharedpreferences.edit();
             if(null != pending_responses && !pending_responses.isEmpty()){
                 editor.putBoolean("turn_on_notify",false);
+                editor.putBoolean("handling_pending_responses",true);
                 editor.apply();
                 //process the pending whatsapp responses
                 pending_list.addAll(pending_responses);
@@ -109,8 +110,12 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                     audioManager.abandonAudioFocus(audioFocusChangeListener);
                     SharedPreferences.Editor editor = sharedpreferences.edit();
                     editor.putBoolean("turn_on_notify",true);
-                    editor.remove("pending_responses");
+                    editor.putBoolean("handling_pending_responses",false);
                     editor.apply();
+                    //
+                    SharedPreferences.Editor editor2 = sharedpreferences.edit();
+                    editor2.remove("pending_responses");
+                    editor2.apply();
                 }
             },10000);
         }
@@ -137,8 +142,10 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
         }else{
             SharedPreferences.Editor editor = sharedpreferences.edit();
             editor.putBoolean("turn_on_notify",true);
+            editor.putBoolean("handling_pending_responses",false);
             editor.apply();
             Toast.makeText(ctx, "Notify was denied access to audio focus", Toast.LENGTH_LONG).show();
+            bring_main_activity_to_foreground();  // but we keep responses in the sharedPreferences // pending_responses
         }
     }
 
@@ -189,9 +196,14 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                                 // abandon audio focus
                                 audioManager.abandonAudioFocus(audioFocusChangeListener);
                                 SharedPreferences.Editor editor = sharedpreferences.edit();
-                                editor.putBoolean("turn_on_notify",true);
                                 editor.remove("pending_responses");
                                 editor.apply();
+                                //
+                                SharedPreferences.Editor editor2 = sharedpreferences.edit();
+                                editor2.putBoolean("turn_on_notify",true);
+                                editor2.putBoolean("handling_pending_responses",false);
+                                editor2.apply();
+                                bring_main_activity_to_foreground();
                             }
                     }
                     },80000);
@@ -207,9 +219,14 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                                 // abandon audio focus
                                 audioManager.abandonAudioFocus(audioFocusChangeListener);
                                 SharedPreferences.Editor editor = sharedpreferences.edit();
-                                editor.putBoolean("turn_on_notify",true);
                                 editor.remove("pending_responses");
                                 editor.apply();
+                                //
+                                SharedPreferences.Editor editor2 = sharedpreferences.edit();
+                                editor2.putBoolean("turn_on_notify",true);
+                                editor2.putBoolean("handling_pending_responses",false);
+                                editor2.apply();
+                                bring_main_activity_to_foreground();
                             }
                         }
                     },80000);
@@ -225,6 +242,14 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
             super.onPostExecute(aVoid);
 
         }
+    }
+
+    private void bring_main_activity_to_foreground(){
+        // move the app to the foreground
+        Intent intent = new Intent(ctx, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        ctx.startActivity(intent);
+        //
     }
 
 }

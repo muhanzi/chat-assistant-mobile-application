@@ -19,6 +19,7 @@ public class SpeakTextService extends Service {
     private TextToSpeech textToSpeech;
     private Context context;
     private String textToSay="";
+    private String TTS_finished_up;
 
     public SpeakTextService() {
     }
@@ -43,10 +44,22 @@ public class SpeakTextService extends Service {
             textToSpeech = initializeTextToSpeech();
             textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
         }
-        textToSay=intent.getStringExtra("textToSay");
         //
-        Speak speak=new Speak();
-        speak.execute();
+        textToSay=intent.getStringExtra("textToSay");
+        if(TTS_finished_up != null){
+            Speak speak=new Speak();
+            speak.execute();
+        }
+        else{
+            Handler handler=new Handler();
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    Speak speak=new Speak();
+                    speak.execute();
+                }
+            },5000); // wait a bit so that Text to Speech finish initialization
+        }
         //
         return super.onStartCommand(intent, flags, startId);
     }
@@ -64,6 +77,7 @@ public class SpeakTextService extends Service {
                     } else {
                         Log.i("TTS", "Language Supported.");
                     }
+                    TTS_finished_up="true"; // setup finished
                     Log.i("TTS", "Initialization success.");
                 } else {
                     Toast.makeText(getApplicationContext(), "TTS Initialization failed!", Toast.LENGTH_SHORT).show();
@@ -110,6 +124,7 @@ public class SpeakTextService extends Service {
 
         @Override
         protected Void doInBackground(Void... voids) {
+            //
             int speechStatus = textToSpeech.speak(textToSay, TextToSpeech.QUEUE_FLUSH, null, null);
             //
             while(textToSpeech.isSpeaking()){
