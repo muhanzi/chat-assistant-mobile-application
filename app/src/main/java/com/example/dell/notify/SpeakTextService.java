@@ -109,10 +109,10 @@ public class SpeakTextService extends Service {
             handler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    Speak speak=new Speak();
-                    speak.execute();
+                    Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
+                    LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
                 }
-            },10000);
+            },30000);
         }
     };
 

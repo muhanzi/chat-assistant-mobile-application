@@ -65,6 +65,9 @@ public class NotificationService extends NotificationListenerService {
         if(extras.getString("android.title") != null && extras.getCharSequence("android.text") != null){
             title = extras.getString("android.title");
             text = extras.getCharSequence("android.text").toString();
+            if(title.equalsIgnoreCase("chat heads active")){  // messenger stuff // com.facebook.orca
+                return;
+            }
         }else{
             // title or text is empty
             return;
@@ -90,11 +93,7 @@ public class NotificationService extends NotificationListenerService {
         if(packageName.equals("android") || packageName.equals("com.example.dell.notify") || packageName.equals(sms_package_name)){
             return;
         }
-        if(packageName.equals("com.facebook.orca") || packageName.equals("com.facebook.mlite")){
-            if(title != null && title.equals("chat heads active")){
-                return;
-            }
-        }
+
         LocalBroadcastManager.getInstance(context).sendBroadcast(msgrcv);
         // remove the notification from the status bar if app is sms or whatsapp // to avoid the issue of like "2 messages from this person"  // this makes it easy to read messages from whatsapp groups // because whatsapp will be posting them
         if(packageName.equals("com.whatsapp"))

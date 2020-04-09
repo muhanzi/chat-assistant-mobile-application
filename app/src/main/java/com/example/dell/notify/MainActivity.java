@@ -216,37 +216,81 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
     private void change_mode(){
         String mode=sharedpreferences.getString("mode","");
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this);
+        dialog.setTitle("Change Mode ?");
+        //
         String message;
         if(mode.equals("chatting_mode")){
             message="you are currently using CHATTING mode";
+            dialog.setMessage(message);
+            dialog.setPositiveButton("disable chatting", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface paramDialogInterface, int paramInt) {
+                    SharedPreferences.Editor editor = sharedpreferences.edit();
+                    editor.putString("mode","");
+                    editor.commit();
+                    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // works fine
+                    Toast.makeText(MainActivity.this, "you have just switched to Chatting mode ", Toast.LENGTH_SHORT).show();
+                }
+            });
+            dialog.setNegativeButton("sms mode", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface paramDialogInterface, int paramInt) {
+                    SharedPreferences.Editor editor = sharedpreferences.edit();
+                    editor.putString("mode","sms_mode");
+                    editor.commit();
+                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // let the screen to go off
+                    Toast.makeText(MainActivity.this, "you have just switched to SMS mode ", Toast.LENGTH_SHORT).show();
+                }
+            });
         }else if(mode.equals("sms_mode")){
             message="you are currently using SMS mode";
+            dialog.setMessage(message);
+            dialog.setPositiveButton("chatting mode", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface paramDialogInterface, int paramInt) {
+                    SharedPreferences.Editor editor = sharedpreferences.edit();
+                    editor.putString("mode","chatting_mode");
+                    editor.commit();
+                    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // works fine
+                    Toast.makeText(MainActivity.this, "you have just switched to Chatting mode ", Toast.LENGTH_SHORT).show();
+                }
+            });
+            dialog.setNegativeButton("disable sms", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface paramDialogInterface, int paramInt) {
+                    SharedPreferences.Editor editor = sharedpreferences.edit();
+                    editor.putString("mode","");
+                    editor.commit();
+                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // let the screen to go off
+                    Toast.makeText(MainActivity.this, "you have just switched to SMS mode ", Toast.LENGTH_SHORT).show();
+                }
+            });
         }else{
-            message="no mode is chosen yet";
+            message="you are in DEFAULT mode";
+            dialog.setMessage(message);
+            dialog.setPositiveButton("chatting mode", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface paramDialogInterface, int paramInt) {
+                    SharedPreferences.Editor editor = sharedpreferences.edit();
+                    editor.putString("mode","chatting_mode");
+                    editor.commit();
+                    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // works fine
+                    Toast.makeText(MainActivity.this, "you have just switched to Chatting mode ", Toast.LENGTH_SHORT).show();
+                }
+            });
+            dialog.setNegativeButton("sms mode", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface paramDialogInterface, int paramInt) {
+                    SharedPreferences.Editor editor = sharedpreferences.edit();
+                    editor.putString("mode","sms_mode");
+                    editor.commit();
+                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // let the screen to go off
+                    Toast.makeText(MainActivity.this, "you have just switched to SMS mode ", Toast.LENGTH_SHORT).show();
+                }
+            });
         }
-        AlertDialog.Builder dialog = new AlertDialog.Builder(this);
-        dialog.setTitle("Change Mode ?");
-        dialog.setMessage(message);
-        dialog.setPositiveButton("chatting mode", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface paramDialogInterface, int paramInt) {
-                SharedPreferences.Editor editor = sharedpreferences.edit();
-                editor.putString("mode","chatting_mode");
-                editor.commit();
-                getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // works fine
-                Toast.makeText(MainActivity.this, "you have just switched to Chatting mode ", Toast.LENGTH_SHORT).show();
-            }
-        });
-        dialog.setNegativeButton("sms mode", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface paramDialogInterface, int paramInt) {
-                SharedPreferences.Editor editor = sharedpreferences.edit();
-                editor.putString("mode","sms_mode");
-                editor.commit();
-                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // let the screen to go off
-                Toast.makeText(MainActivity.this, "you have just switched to SMS mode ", Toast.LENGTH_SHORT).show();
-            }
-        });
+        //
         dialog.show();
     }
 
@@ -651,9 +695,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         String mode=sharedpreferences.getString("mode","");
         Handler handler=new Handler();
         if(packageName.equals(whatsapp_package_name)){
-            //
-            //send_message_on_whatsapp(response);
-            //
             if(isPhoneLocked()){
                 if(mode.equals("sms_mode")){
                     sendSMSMessage(response); // send sms
