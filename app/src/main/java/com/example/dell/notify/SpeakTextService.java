@@ -100,6 +100,7 @@ public class SpeakTextService extends Service {
 
         @Override
         public void onError(String s) {
+            Log.e("TTS","onError() error happened while speaking // SpeakTextService");
             // to prevent ANR dialog (application not responding)  // when textToSpeech is may be reading a long text or its used many times in a short period
             textToSpeech.stop();  // Interrupts the current utterance (whether played or rendered to file) and discards other utterances in the queue.
             textToSpeech.shutdown(); // Releases the resources used by the TextToSpeech engine.
@@ -112,7 +113,7 @@ public class SpeakTextService extends Service {
                     Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
                     LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
                 }
-            },30000);
+            },20000); // after 20 seconds
         }
     };
 
@@ -126,18 +127,13 @@ public class SpeakTextService extends Service {
         protected Void doInBackground(Void... voids) {
             //
             int speechStatus = textToSpeech.speak(textToSay, TextToSpeech.QUEUE_FLUSH, null, null);
-            //
             while(textToSpeech.isSpeaking()){
                 Log.i("tts","text to speech");
             }
-            if(!textToSpeech.isSpeaking()) {
-                Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
-                LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
-            }else{
-                textToSpeech.stop();
-                Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
-                LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
-            }
+            //
+            textToSpeech.stop();  // don't shut it down
+            Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
+            LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
             //
             return null;
         }

@@ -133,8 +133,12 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         startService(myServiceIntent);
         //
         button_start_now =(Button) findViewById(R.id.start_now);
-        textToSpeech = initializeTextToSpeech();
-        textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
+        //
+        Set<String> pending_responses_set = sharedpreferences.getStringSet("pending_responses",null); // default value --> null // it means no pending responses
+        if(pending_responses_set == null){
+            textToSpeech = initializeTextToSpeech();
+            textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
+        }
         //
         mSpeechRecognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -170,10 +174,15 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
         button_start_now.setOnClickListener(new View.OnClickListener() {  // after enabling notification listener in the settings
             @Override
-            public void onClick(View view) {
+            public void onClick(View view){
                 boolean handling_pending_responses=sharedpreferences.getBoolean("handling_pending_responses",false); // default value --> false
                 if(handling_pending_responses){
+                    Toast.makeText(MainActivity.this, "Notify has pending responses", Toast.LENGTH_SHORT).show();
                     return;
+                }
+                if(textToSpeech == null) {  // may be textToSpeech wasn't initialized during onCreate() because notify was handling pending_responses
+                    textToSpeech = initializeTextToSpeech();
+                    textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
                 }
                 startNow();
             }
@@ -230,7 +239,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     editor.putString("mode","");
                     editor.commit();
                     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // works fine
-                    Toast.makeText(MainActivity.this, "you have just switched to Chatting mode ", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "you have just switched to Default mode ", Toast.LENGTH_SHORT).show();
                 }
             });
             dialog.setNegativeButton("sms mode", new DialogInterface.OnClickListener() {
@@ -263,7 +272,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     editor.putString("mode","");
                     editor.commit();
                     getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // let the screen to go off
-                    Toast.makeText(MainActivity.this, "you have just switched to SMS mode ", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "you have just switched to Default mode ", Toast.LENGTH_SHORT).show();
                 }
             });
         }else{
@@ -298,6 +307,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         // Turn Notify off
         SharedPreferences.Editor editor = sharedpreferences.edit();
         editor.putBoolean("turn_on_notify",false);
+        editor.putBoolean("handling_pending_responses",false); // to allow "Start Now" button
         editor.apply();  // will save it in the background
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         // if it crashes again we put here delay of 5 seconds
@@ -318,7 +328,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         }
         // broadcasts
         register_broadcast_for_phone_unlocked();
-//        register_broadcasts_for_power_connection();
     }
 
     @Override
@@ -336,6 +345,10 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 if(turn_on_notify){
                     button_start_now.setText(R.string.notify_is_running);
                     button_start_now.setEnabled(false);
+                    if(textToSpeech == null) {  // may be textToSpeech wasn't initialized during onCreate() because notify was handling pending_responses
+                        textToSpeech = initializeTextToSpeech();
+                        textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
+                    }
                 }else{  // all services are running but Notify was turned off
                     button_start_now.setText(R.string.start_now);
                     button_start_now.setEnabled(true);
@@ -460,7 +473,9 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                             notification_in_process=false; // after processing all intents inside the arraylist
                         }
                     }catch (IndexOutOfBoundsException ex){
-                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
+                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist //sendSMSText ");
+                        audioManager.abandonAudioFocus(audioFocusChangeListener);
+                        notification_in_process=false;
                     }
                 }
             },5000); // after 5 seconds proceed with next intent
@@ -506,7 +521,9 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                             notification_in_process=false; // after processing all intents inside the arraylist
                         }
                     }catch (IndexOutOfBoundsException ex){
-                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
+                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // MY_PERMISSIONS_REQUEST_SEND_SMS ");
+                        audioManager.abandonAudioFocus(audioFocusChangeListener);
+                        notification_in_process=false;
                     }
                     //
                 }
@@ -518,17 +535,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 }else{
                     Toast.makeText(this, "permission to record audio is denied", Toast.LENGTH_SHORT).show();
                     //
-                    try{
-                        list_of_notifications.remove(0);
-                        if(!list_of_notifications.isEmpty()){
-                            process_notification(); // process the intent which is now on the position 0
-                        }else{
-                            audioManager.abandonAudioFocus(audioFocusChangeListener);
-                            notification_in_process=false; // after processing all intents inside the arraylist
-                        }
-                    }catch (IndexOutOfBoundsException ex){
-                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
-                    }
+                    remove_intent_after_delay();
                     //
                 }
                 break;
@@ -549,7 +556,9 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                             notification_in_process=false; // after processing all intents inside the arraylist
                         }
                     }catch (IndexOutOfBoundsException ex){
-                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
+                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // REQ_CODE_FOR_ACCESS_CONTACTS");
+                        audioManager.abandonAudioFocus(audioFocusChangeListener);
+                        notification_in_process=false;
                     }
                     //
                 }
@@ -599,34 +608,35 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
         final Handler handler=new Handler();
-        handler.postDelayed(new Runnable() {
+        handler.postDelayed(new Runnable(){
             @Override
-            public void run() {
+            public void run(){
                 int speechStatus = textToSpeech.speak("send whatsapp message to"+title+"  "+text, TextToSpeech.QUEUE_FLUSH, null, null);
                 while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
                     Log.i("tts","text to speech");
                 }
-                if(!textToSpeech.isSpeaking()){
-                  handler.postDelayed(new Runnable() {
-                      @Override
-                      public void run() {
-                          // bring MainActivity to the foreground // so that notification service stays alive
-                          bring_main_activity_to_foreground();
-                          //
-                          try{
-                              list_of_notifications.remove(0);
-                              if(!list_of_notifications.isEmpty()){
-                                  process_notification(); // process the intent which is now on the position 0
-                              }else{
-                                  audioManager.abandonAudioFocus(audioFocusChangeListener);
-                                  notification_in_process=false; // after processing all intents inside the arraylist
-                              }
-                          }catch (IndexOutOfBoundsException ex){
-                              Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
-                          }
-                      }
-                  },80000); // give google assistant 80 seconds to process
-                }
+                handler.postDelayed(new Runnable(){
+                    @Override
+                    public void run(){
+                        // bring MainActivity to the foreground // so that notification service stays alive
+                        bring_main_activity_to_foreground();
+                        //
+                        try{
+                            textToSpeech.stop();
+                            list_of_notifications.remove(0);
+                            if(!list_of_notifications.isEmpty()){
+                                process_notification(); // process the intent which is now on the position 0
+                            }else{
+                                audioManager.abandonAudioFocus(audioFocusChangeListener);
+                                notification_in_process=false; // after processing all intents inside the arraylist
+                            }
+                        }catch (IndexOutOfBoundsException ex){
+                            Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // send_message_on_whatsapp() main activity");
+                            audioManager.abandonAudioFocus(audioFocusChangeListener);
+                            notification_in_process=false;
+                        }
+                    }
+                },80000); // give google assistant 80 seconds to process
             }
         },3000); // 3 secs// just wait for google assistant to get ready
     }
@@ -673,6 +683,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
+                Log.e("audio","onError() error happened while speaking // MainActivity");
                 try{
                     list_of_notifications.remove(0);
                     if(!list_of_notifications.isEmpty()){
@@ -682,7 +693,9 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                         notification_in_process=false; // after processing all intents inside the arraylist
                     }
                 }catch (IndexOutOfBoundsException ex){
-                    Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
+                    Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // onError() record audio");
+                    audioManager.abandonAudioFocus(audioFocusChangeListener);
+                    notification_in_process=false;
                 }
             }
         },5000);
@@ -754,7 +767,9 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     notification_in_process=false; // after processing all intents inside the arraylist
                 }
             }catch (IndexOutOfBoundsException ex){
-                Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
+                Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // onResults() of record audio else branch // not whatsapp ,not sms, not messenger");
+                audioManager.abandonAudioFocus(audioFocusChangeListener);
+                notification_in_process=false;
             }
             //
         }
@@ -781,7 +796,9 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 notification_in_process=false; // after processing all intents inside the arraylist
             }
         }catch (IndexOutOfBoundsException ex){
-            Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
+            Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // remove_intent() ");
+            audioManager.abandonAudioFocus(audioFocusChangeListener);
+            notification_in_process=false;
         }
         //
     }
@@ -849,7 +866,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     };
 
     private void continue_process_notification(){
-        if (textToSpeech == null) {  // I'm doing this because the user may kill "--> onDestroy()"  the mainactivity which initializes the testToSpeech inside the onCreate  // so when our service sends the localBroadcast TextToSpeech will be available
+        if(textToSpeech == null) {  // I'm doing this because the user may kill "--> onDestroy()"  the mainactivity which initializes the testToSpeech inside the onCreate  // so when our service sends the localBroadcast TextToSpeech will be available
             textToSpeech = initializeTextToSpeech();
             textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
         }
@@ -858,20 +875,26 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         if(packageName.equals(whatsapp_package_name)){
             check_access_contacts_permission();
         }else if(packageName.equals(sms_package_name)){
-            sms_to_phone_number=list_of_notifications.get(0).getStringExtra("number");
-            if(isValidPhoneNumber()){
-                int speechStatus = textToSpeech.speak(" if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
-                while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
-                    Log.i("tts","text to speech");
-                }
-                if(!textToSpeech.isSpeaking()) {
-                    check_record_audio_permission();
+            try {
+                sms_to_phone_number=list_of_notifications.get(0).getStringExtra("number");
+                if(isValidPhoneNumber()){
+                    int speechStatus = textToSpeech.speak(" if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
+                    while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
+                        Log.i("tts","text to speech");
+                    }
+                    if(!textToSpeech.isSpeaking()) {
+                        check_record_audio_permission();
+                    }else{
+                        textToSpeech.stop();
+                        check_record_audio_permission();
+                    }
                 }else{
-                    textToSpeech.stop();
-                    check_record_audio_permission();
+                    remove_intent_after_delay();
                 }
-            }else{
-                remove_intent_after_delay();
+            }catch (IndexOutOfBoundsException e){
+                Log.i("Exception","IndexOutOfBoundsException // continue_process_notification // packageName --> sms");
+                audioManager.abandonAudioFocus(audioFocusChangeListener);
+                notification_in_process=false;
             }
         }else if(packageName.equals(messenger) || packageName.equals(messenger_lite)){
             int speechStatus = textToSpeech.speak(" if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
@@ -898,7 +921,9 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                             notification_in_process=false; // after processing all intents inside the arraylist
                         }
                     }catch (IndexOutOfBoundsException ex){
-                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
+                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // continue_processing() // package name does not require any response");
+                        audioManager.abandonAudioFocus(audioFocusChangeListener);
+                        notification_in_process=false;
                     }
                 }
             },5000);
@@ -987,9 +1012,10 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             handler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    remove_intent();
+                    Log.e("TTS","onError() inside main activity");
+                    notification_in_process=false;  // will process again intent at position 0
                 }
-            },10000);
+            },30000);
         }
     };
 
@@ -1160,7 +1186,9 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                         notification_in_process=false; // after processing all intents inside the arraylist
                     }
                 }catch (IndexOutOfBoundsException ex){
-                    Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
+                    Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // remove_intent_after_delay() ");
+                    audioManager.abandonAudioFocus(audioFocusChangeListener);
+                    notification_in_process=false;
                 }
                 //
             }
@@ -1234,7 +1262,9 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                                 notification_in_process=false; // after processing all intents inside the arraylist
                             }
                         }catch (IndexOutOfBoundsException ex){
-                            Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
+                            Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // Speak async class // if(!textToSpeech.isSpeaking())");
+                            audioManager.abandonAudioFocus(audioFocusChangeListener);
+                            notification_in_process=false;
                         }
                     }
                 },5000);
@@ -1252,7 +1282,9 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                                 notification_in_process=false; // after processing all intents inside the arraylist
                             }
                         }catch (IndexOutOfBoundsException ex){
-                            Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist ");
+                            Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // Speak async class // if(textToSpeech.isSpeaking())");
+                            audioManager.abandonAudioFocus(audioFocusChangeListener);
+                            notification_in_process=false;
                         }
                     }
                 },5000);
@@ -1286,7 +1318,9 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                         notification_in_process=false; // after processing all intents inside the arraylist
                     }
                 }catch (IndexOutOfBoundsException ex){
-                    Log.e("Exception","IndexOutOfBoundsException error occurred");
+                    Log.e("Exception","IndexOutOfBoundsException error occurred // sendToMessenger()");
+                    audioManager.abandonAudioFocus(audioFocusChangeListener);
+                    notification_in_process=false;
                 }
             }
         },30000);  // after 30 seconds process next intent

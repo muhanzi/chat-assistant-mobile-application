@@ -31,12 +31,14 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
     private TextToSpeech textToSpeech;
     private Context ctx;
     private AudioManager audioManager;
+    private Handler handler;
+    private KeyguardManager keyguardManager;
 
     @Override
     public void onReceive(Context context, Intent intent) {
         //
         ctx=context;
-        KeyguardManager keyguardManager = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
+        keyguardManager = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
         //
         sharedpreferences = PreferenceManager.getDefaultSharedPreferences(context);
         pending_responses=sharedpreferences.getStringSet("pending_responses",null);
@@ -52,9 +54,9 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
             // phone is unlocked
             SharedPreferences.Editor editor = sharedpreferences.edit();
             if(null != pending_responses && !pending_responses.isEmpty()){
-                editor.putBoolean("turn_on_notify",false);
+                editor.putBoolean("turn_on_notify",false);  // it means we first process pending responses
                 editor.putBoolean("handling_pending_responses",true);
-                editor.apply();
+                editor.commit();
                 //process the pending whatsapp responses
                 pending_list.addAll(pending_responses);
                 send_message_on_whatsapp();
@@ -98,6 +100,7 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
 
         @Override
         public void onError(String s) {
+            Log.e("TTS","onError() error happened while speaking // PhoneUnlockedBroadcastReceiver");
             textToSpeech.stop();  // Interrupts the current utterance (whether played or rendered to file) and discards other utterances in the queue.
             textToSpeech.shutdown(); // Releases the resources used by the TextToSpeech engine.
             Toast.makeText(ctx, "Error occurred while saying the text", Toast.LENGTH_LONG).show();
@@ -111,11 +114,8 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                     SharedPreferences.Editor editor = sharedpreferences.edit();
                     editor.putBoolean("turn_on_notify",true);
                     editor.putBoolean("handling_pending_responses",false);
-                    editor.apply();
-                    //
-                    SharedPreferences.Editor editor2 = sharedpreferences.edit();
-                    editor2.remove("pending_responses");
-                    editor2.apply();
+                    editor.commit();
+                    // we keep responses
                 }
             },10000);
         }
@@ -123,6 +123,15 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
 
 
     private void send_message_on_whatsapp(){
+        if(keyguardManager.isDeviceLocked() || keyguardManager.isKeyguardLocked() || keyguardManager.inKeyguardRestrictedInputMode()){
+            Log.i("Locked","device is locked");
+            SharedPreferences.Editor editor = sharedpreferences.edit();
+            editor.putBoolean("turn_on_notify",true);  // to allow other messages to come in
+            editor.putBoolean("handling_pending_responses",false);
+            editor.commit();
+            return;
+        }
+        handler=new Handler();
         if (textToSpeech == null) {
             textToSpeech = initializeTextToSpeech();
             textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
@@ -143,9 +152,10 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
             SharedPreferences.Editor editor = sharedpreferences.edit();
             editor.putBoolean("turn_on_notify",true);
             editor.putBoolean("handling_pending_responses",false);
-            editor.apply();
+            editor.commit();
             Toast.makeText(ctx, "Notify was denied access to audio focus", Toast.LENGTH_LONG).show();
-            bring_main_activity_to_foreground();  // but we keep responses in the sharedPreferences // pending_responses
+            //no need to bring notify to the foreground if audio focus is not given
+            //bring_main_activity_to_foreground();  // but we keep responses in the sharedPreferences // pending_responses
         }
     }
 
@@ -184,62 +194,50 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                 while(textToSpeech.isSpeaking()){
                     Log.i("tts","text to speech");
                 }
-                Handler handler=new Handler();
-                if(!textToSpeech.isSpeaking()){
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            try{
-                                pending_list.remove(0);
-                                if(!pending_list.isEmpty()){
-                                    send_message_on_whatsapp();
-                                }else{
-                                    // abandon audio focus
-                                    audioManager.abandonAudioFocus(audioFocusChangeListener);
-                                    SharedPreferences.Editor editor = sharedpreferences.edit();
-                                    editor.remove("pending_responses");
-                                    editor.apply();
-                                    //
-                                    SharedPreferences.Editor editor2 = sharedpreferences.edit();
-                                    editor2.putBoolean("turn_on_notify",true);
-                                    editor2.putBoolean("handling_pending_responses",false);
-                                    editor2.apply();
-                                    bring_main_activity_to_foreground();
-                                }
-                            }catch(IndexOutOfBoundsException ex){
-                                Log.e("Exception","IndexOutOfBoundsException ");
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        try{
+                            pending_list.remove(0);
+                            if(!pending_list.isEmpty()){
+                                send_message_on_whatsapp();
+                            }else{
+                                // abandon audio focus
+                                audioManager.abandonAudioFocus(audioFocusChangeListener);
+                                // let release resources that Text to speech was using
+                                textToSpeech.stop();
+                                textToSpeech.shutdown();
+                                //
+                                SharedPreferences.Editor editor = sharedpreferences.edit();
+                                editor.remove("pending_responses");
+                                editor.apply();
+                                //
+                                SharedPreferences.Editor editor2 = sharedpreferences.edit();
+                                editor2.putBoolean("turn_on_notify",true);
+                                editor2.putBoolean("handling_pending_responses",false);
+                                editor2.apply();
+                                bring_main_activity_to_foreground();
                             }
-                    }
-                    },80000);
-                }else{
-                    textToSpeech.stop();
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            try{
-                                pending_list.remove(0);
-                                if(!pending_list.isEmpty()){
-                                    send_message_on_whatsapp();
-                                }else{
-                                    // abandon audio focus
-                                    audioManager.abandonAudioFocus(audioFocusChangeListener);
-                                    SharedPreferences.Editor editor = sharedpreferences.edit();
-                                    editor.remove("pending_responses");
-                                    editor.apply();
-                                    //
-                                    SharedPreferences.Editor editor2 = sharedpreferences.edit();
-                                    editor2.putBoolean("turn_on_notify",true);
-                                    editor2.putBoolean("handling_pending_responses",false);
-                                    editor2.apply();
-                                    bring_main_activity_to_foreground();
-                                }
-                            }catch(IndexOutOfBoundsException ex){
-                                Log.e("Exception","IndexOutOfBoundsException ");
-                            }
+                        }catch(IndexOutOfBoundsException ex){
+                            audioManager.abandonAudioFocus(audioFocusChangeListener);
+                            Log.e("PhoneUnlocked","IndexOutOfBoundsException // doInBackground() ");
+                            SharedPreferences.Editor editor = sharedpreferences.edit();
+                            editor.putBoolean("turn_on_notify",true);
+                            editor.putBoolean("handling_pending_responses",false);
+                            editor.commit();
+                            bring_main_activity_to_foreground();
                         }
-                    },80000);
-                }
+                    }
+                },50000);  // give 50 seconds to google assistant to process
                 //
+            }else{
+                audioManager.abandonAudioFocus(audioFocusChangeListener);
+                SharedPreferences.Editor editor = sharedpreferences.edit();
+                editor.putBoolean("turn_on_notify",true);
+                editor.putBoolean("handling_pending_responses",false);
+                editor.commit();
+                Log.i("PhoneUnlocked","pending_list.isEmpty()  --> true");
+                bring_main_activity_to_foreground();
             }
 
             return null;
