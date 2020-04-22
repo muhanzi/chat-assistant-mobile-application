@@ -1,11 +1,15 @@
 package com.example.dell.notify;
 
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.support.v4.content.LocalBroadcastManager;
@@ -20,6 +24,7 @@ public class SpeakTextService extends Service {
     private Context context;
     private String textToSay="";
     private String TTS_finished_up;
+    private SharedPreferences sharedpreferences;
 
     public SpeakTextService() {
     }
@@ -30,7 +35,18 @@ public class SpeakTextService extends Service {
         textToSpeech=initializeTextToSpeech();
         textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
         context=getApplicationContext();
+        sharedpreferences = PreferenceManager.getDefaultSharedPreferences(context);
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("pending_responses"));
     }
+
+    BroadcastReceiver broadcastReceiver=new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if(textToSpeech != null){
+                textToSpeech.stop();
+            }
+        }
+    };
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -39,26 +55,29 @@ public class SpeakTextService extends Service {
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        if (textToSpeech == null) {
-            textToSpeech = initializeTextToSpeech();
-            textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
-        }
-        //
-        textToSay=intent.getStringExtra("textToSay");
-        if(TTS_finished_up != null){
-            Speak speak=new Speak();
-            speak.execute();
-        }
-        else{
-            Handler handler=new Handler();
-            handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    Speak speak=new Speak();
-                    speak.execute();
-                }
-            },5000); // wait a bit so that Text to Speech finish initialization
+    public int onStartCommand(Intent intent, int flags, int startId){
+        boolean handling_pending_responses=sharedpreferences.getBoolean("handling_pending_responses",false); // default value --> false
+        if(!handling_pending_responses){
+            if(textToSpeech == null){
+                textToSpeech = initializeTextToSpeech();
+                textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
+            }
+            //
+            textToSay=intent.getStringExtra("textToSay");
+            if(TTS_finished_up != null){
+                Speak speak=new Speak();
+                speak.execute();
+            }
+            else{
+                Handler handler=new Handler();
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        Speak speak=new Speak();
+                        speak.execute();
+                    }
+                },5000); // wait a bit so that Text to Speech finish initialization
+            }
         }
         //
         return super.onStartCommand(intent, flags, startId);
@@ -105,15 +124,6 @@ public class SpeakTextService extends Service {
             textToSpeech.stop();  // Interrupts the current utterance (whether played or rendered to file) and discards other utterances in the queue.
             textToSpeech.shutdown(); // Releases the resources used by the TextToSpeech engine.
             Toast.makeText(getApplicationContext(), "Text to speech encountered an error", Toast.LENGTH_LONG).show();
-            //
-            Handler handler=new Handler();
-            handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
-                    LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
-                }
-            },20000); // after 20 seconds
         }
     };
 

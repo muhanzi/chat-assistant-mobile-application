@@ -11,6 +11,7 @@ import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -33,11 +34,13 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
     private AudioManager audioManager;
     private Handler handler;
     private KeyguardManager keyguardManager;
+    private Intent pending_responses_finished;
 
     @Override
     public void onReceive(Context context, Intent intent) {
         //
         ctx=context;
+        pending_responses_finished = new Intent("pending_responses_finished");
         keyguardManager = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
         //
         sharedpreferences = PreferenceManager.getDefaultSharedPreferences(context);
@@ -54,6 +57,9 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
             // phone is unlocked
             SharedPreferences.Editor editor = sharedpreferences.edit();
             if(null != pending_responses && !pending_responses.isEmpty()){
+                //local broadcast
+                Intent pending_responses_intent = new Intent("pending_responses"); // action --> "pending_responses"
+                LocalBroadcastManager.getInstance(context).sendBroadcast(pending_responses_intent);
                 editor.putBoolean("turn_on_notify",false);  // it means we first process pending responses
                 editor.putBoolean("handling_pending_responses",true);
                 editor.commit();
@@ -115,6 +121,7 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                     editor.putBoolean("turn_on_notify",true);
                     editor.putBoolean("handling_pending_responses",false);
                     editor.commit();
+                    LocalBroadcastManager.getInstance(ctx).sendBroadcast(pending_responses_finished);
                     // we keep responses
                 }
             },10000);
@@ -129,6 +136,8 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
             editor.putBoolean("turn_on_notify",true);  // to allow other messages to come in
             editor.putBoolean("handling_pending_responses",false);
             editor.commit();
+            LocalBroadcastManager.getInstance(ctx).sendBroadcast(pending_responses_finished);
+
             return;
         }
         handler=new Handler();
@@ -154,8 +163,8 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
             editor.putBoolean("handling_pending_responses",false);
             editor.commit();
             Toast.makeText(ctx, "Notify was denied access to audio focus", Toast.LENGTH_LONG).show();
-            //no need to bring notify to the foreground if audio focus is not given
-            //bring_main_activity_to_foreground();  // but we keep responses in the sharedPreferences // pending_responses
+            LocalBroadcastManager.getInstance(ctx).sendBroadcast(pending_responses_finished);
+
         }
     }
 
@@ -200,6 +209,7 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                         try{
                             pending_list.remove(0);
                             if(!pending_list.isEmpty()){
+                                //
                                 send_message_on_whatsapp();
                             }else{
                                 // abandon audio focus
@@ -216,6 +226,8 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                                 editor2.putBoolean("turn_on_notify",true);
                                 editor2.putBoolean("handling_pending_responses",false);
                                 editor2.apply();
+                                LocalBroadcastManager.getInstance(ctx).sendBroadcast(pending_responses_finished);
+
                                 bring_main_activity_to_foreground();
                             }
                         }catch(IndexOutOfBoundsException ex){
@@ -225,6 +237,8 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                             editor.putBoolean("turn_on_notify",true);
                             editor.putBoolean("handling_pending_responses",false);
                             editor.commit();
+                            LocalBroadcastManager.getInstance(ctx).sendBroadcast(pending_responses_finished);
+
                             bring_main_activity_to_foreground();
                         }
                     }
@@ -236,6 +250,8 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                 editor.putBoolean("turn_on_notify",true);
                 editor.putBoolean("handling_pending_responses",false);
                 editor.commit();
+                LocalBroadcastManager.getInstance(ctx).sendBroadcast(pending_responses_finished);
+
                 Log.i("PhoneUnlocked","pending_list.isEmpty()  --> true");
                 bring_main_activity_to_foreground();
             }

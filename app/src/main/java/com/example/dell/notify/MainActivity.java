@@ -8,6 +8,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.job.JobInfo;
+import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -105,6 +106,8 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     //
     private KeyguardManager keyguardManager;
     //
+    private final int REQ_CODE_SPEAK = 100;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -157,6 +160,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         createNotificationChannel();
         LocalBroadcastManager.getInstance(this).registerReceiver(onNotice, new IntentFilter("Msg"));
         LocalBroadcastManager.getInstance(this).registerReceiver(onFinishSpeaking, new IntentFilter("Speaking"));
+        LocalBroadcastManager.getInstance(this).registerReceiver(pending_responses_finished_receiver, new IntentFilter("pending_responses_finished"));
         if(checkNotificationEnabled()){
             showNotification();  // Know that a notification can be shown even without the "Notification listener" permission
         }
@@ -166,8 +170,8 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         // broadcast when user unlock his phone
         register_broadcast_for_phone_unlocked();
         //
-        sharedpreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        pending_responses=new HashSet<>();
+        Set<String> empty_set = new HashSet<>();
+        pending_responses= sharedpreferences.getStringSet("pending_responses",empty_set); // default value is an empty set // that means there were no pending responses
         //
 
         keyguardManager = (KeyguardManager) this.getSystemService(Context.KEYGUARD_SERVICE);
@@ -238,7 +242,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     SharedPreferences.Editor editor = sharedpreferences.edit();
                     editor.putString("mode","");
                     editor.commit();
-                    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // works fine
+                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                     Toast.makeText(MainActivity.this, "you have just switched to Default mode ", Toast.LENGTH_SHORT).show();
                 }
             });
@@ -271,7 +275,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     SharedPreferences.Editor editor = sharedpreferences.edit();
                     editor.putString("mode","");
                     editor.commit();
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // let the screen to go off
                     Toast.makeText(MainActivity.this, "you have just switched to Default mode ", Toast.LENGTH_SHORT).show();
                 }
             });
@@ -294,7 +297,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     SharedPreferences.Editor editor = sharedpreferences.edit();
                     editor.putString("mode","sms_mode");
                     editor.commit();
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // let the screen to go off
                     Toast.makeText(MainActivity.this, "you have just switched to SMS mode ", Toast.LENGTH_SHORT).show();
                 }
             });
@@ -307,7 +309,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         // Turn Notify off
         SharedPreferences.Editor editor = sharedpreferences.edit();
         editor.putBoolean("turn_on_notify",false);
-        editor.putBoolean("handling_pending_responses",false); // to allow "Start Now" button
         editor.apply();  // will save it in the background
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         // if it crashes again we put here delay of 5 seconds
@@ -535,7 +536,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 }else{
                     Toast.makeText(this, "permission to record audio is denied", Toast.LENGTH_SHORT).show();
                     //
-                    remove_intent_after_delay();
+                    process_intent_again();
                     //
                 }
                 break;
@@ -597,6 +598,112 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.SEND_SMS,Manifest.permission.READ_SMS,Manifest.permission.RECEIVE_SMS,Manifest.permission.RECORD_AUDIO,Manifest.permission.READ_CONTACTS},
                 REQ_CODE_PERMISSIONS_FOR_SMS_AUDIO_CONTACTS);
+    }
+
+    private void process_intent_again(){
+        Handler handler=new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+                intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Need to speak");
+                try {
+                    startActivityForResult(intent, REQ_CODE_SPEAK);
+                } catch (ActivityNotFoundException a) {
+                    Toast.makeText(getApplicationContext(),
+                            "Sorry your device not supported",
+                            Toast.LENGTH_SHORT).show();
+                }
+                //
+            }
+        },5000); // delay of 5 seconds
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case REQ_CODE_SPEAK: {
+                if (resultCode == RESULT_OK && null != data) {
+                    ArrayList result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                    String response = result.get(0).toString();
+                    //
+                    String mode=sharedpreferences.getString("mode","");
+                    Handler handler=new Handler();
+                    if(packageName.equals(whatsapp_package_name)){
+                        if(isPhoneLocked()){
+                            if(mode.equals("sms_mode")){
+                                sendSMSMessage(response); // send sms
+                            }else{
+                                // either in chatting mode // or no mode // user has not yet activated any mode
+                                //
+                                SharedPreferences.Editor editor = sharedpreferences.edit();
+                                pending_responses.add("send whatsapp message to"+title+"  "+response);  // add response to the set
+                                editor.putStringSet("pending_responses",pending_responses);  // save the set
+                                editor.apply();
+                                //
+                                text_to_say="your phone is locked, this message will be sent when you unlock it";
+                                Speak speak=new Speak();
+                                speak.execute();
+                                //
+                                // save the message in a set of strings inside shared preferences // when phone is unlocked it will send these messages
+                            }
+                        }else{
+                            if(mode.equals("sms_mode")){
+                                sendSMSMessage(response); // send sms
+                            }else{
+                                // either in chatting mode // or no mode // user has not yet activated any mode
+                                send_message_on_whatsapp(response);// send directly to whatsapp
+                            }
+                        }
+                        //
+                    }else if(packageName.equals(sms_package_name)){
+                        sendSMSMessage(response); //
+                    }else if(packageName.equals(messenger)){
+                        // reply to messenger
+                        if(!isPhoneLocked()){
+                            sendToMessenger(response,messenger);
+                        }else{
+                            text_to_say="your phone is locked, please switch to chatting mode to enable notify to send your response to messenger";
+                            Speak speak=new Speak();
+                            speak.execute();
+                        }
+                        //
+                    }else if(packageName.equals(messenger_lite)){
+                        // reply to messenger lite
+                        if(!isPhoneLocked()){
+                            sendToMessenger(response,messenger_lite);
+                        }else{
+                            text_to_say="your phone is locked, please switch to chatting mode to enable notify to send your response to messenger lite";
+                            Speak speak=new Speak();
+                            speak.execute();
+                        }
+                        //
+                    }else{
+                        //proceed with next intent in the list
+                        try{
+                            list_of_notifications.remove(0);
+                            if(!list_of_notifications.isEmpty()){
+                                process_notification(); // process the intent which is now on the position 0
+                            }else{
+                                audioManager.abandonAudioFocus(audioFocusChangeListener);
+                                notification_in_process=false; // after processing all intents inside the arraylist
+                            }
+                        }catch (IndexOutOfBoundsException ex){
+                            Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // onResults() of record audio else branch // not whatsapp ,not sms, not messenger");
+                            audioManager.abandonAudioFocus(audioFocusChangeListener);
+                            notification_in_process=false;
+                        }
+                        //
+                    }
+                    //
+                }
+                break;
+            }
+        }
     }
 
     private void send_message_on_whatsapp(final String text){
@@ -1347,6 +1454,17 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         super.onPause();
         unregisterReceiver(phoneUnlockedReceiver);
     }
+
+    BroadcastReceiver pending_responses_finished_receiver=new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if(list_of_notifications.isEmpty()){
+                notification_in_process=false;
+            }else{
+                process_notification(); // after handling pending responses // now process the intnet that just arrived in that time of handling pending responses
+            }
+        }
+    };
 
     //====
 

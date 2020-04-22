@@ -69,14 +69,6 @@
             </intent-filter>
         </receiver>
 
-        <!--  !!!!!! doesn't work !!!! // this will enable us to receive broadcast even when main activity is not on the foreground // with this must must remove it the main activity , and also remove unregister()
-        <receiver android:name=".PhoneUnlockedBroadcastReceiver">
-            <intent-filter>
-                <action android:name="android.intent.action.USER_PRESENT" />
-            </intent-filter>
-        </receiver>
-        -->
-
     </application>
 
 </manifest>
