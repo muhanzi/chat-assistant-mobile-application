@@ -8,7 +8,6 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.job.JobInfo;
-import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -27,6 +26,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Messenger;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.preference.PreferenceManager;
 import android.provider.ContactsContract;
 import android.provider.Settings;
@@ -143,16 +144,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
         }
         //
-        mSpeechRecognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,
-                getApplication().getPackageName());
-        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-        //
-        // create a recognizer
-        mSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);  // this ---> context
-        mSpeechRecognizer.setRecognitionListener(this); // this ---> RecognitionListener interface
+        create_speech_recognizer();
         //
         audioManager = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
 
@@ -329,6 +321,10 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         }
         // broadcasts
         register_broadcast_for_phone_unlocked();
+        //
+        if(mSpeechRecognizer == null){
+            create_speech_recognizer();
+        }
     }
 
     @Override
@@ -660,12 +656,16 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     }
 
     @Override
-    public void onDestroy() {
+    public void onDestroy(){
         super.onDestroy();
         // when the activity is killed
         SharedPreferences.Editor editor = sharedpreferences.edit();
         editor.putBoolean("MainActivityIsActive",false);
         editor.commit();
+        mSpeechRecognizer.destroy();  // SpeechRecognizer uses a single instance only
+        // when user clicks back button onDestroy() will be called that means we need to destroy the object of SpeechRecognizer so that when the activity launches again the SpeechRecognizer recreates the instance
+        // during onPause() SpeechRecognizer will clean up its object // remember onPause() comes before onDestroy()
+        // still SpeechRecognizer doesn't work when the activity is created again // !!!!!!!!
     }
 
     // for RegisterListener Interface
@@ -1104,12 +1104,11 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
     @Override
     public void onBackPressed() {
-        // we disable the back button
-        Toast.makeText(this, "please use the home button to leave the app", Toast.LENGTH_SHORT).show();
+          //to disable back button // just remove  super.onBackPressed();
+        Toast.makeText(this, "please use the home button to leave the app", Toast.LENGTH_LONG).show();
+        vibrate_phone();
         return;
     }
-
-
 
     private void schedule_the_job(){
         JobInfo.Builder builder = new JobInfo.Builder(0, myServiceComponent);
@@ -1399,125 +1398,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         }
     };
 
-    //====
-
-    private void record_audio(){
-        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Say your Message");
-        try {
-            startActivityForResult(intent, REQ_CODE_SPEAK);
-        } catch (ActivityNotFoundException a) {
-            Toast.makeText(getApplicationContext(),
-                    "Sorry your device not supported",
-                    Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        switch (requestCode) {
-            case REQ_CODE_SPEAK: {
-                if (resultCode == RESULT_OK && null != data) {
-                    ArrayList result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-                    String response = result.get(0).toString();
-                    //
-                    String mode=sharedpreferences.getString("mode","");
-                    if(packageName.equals(whatsapp_package_name)){
-                        if(isPhoneLocked()){
-                            if(mode.equals("sms_mode")){
-                                sendSMSMessage(response); // send sms
-                            }else{
-                                // either in chatting mode // or no mode // user has not yet activated any mode
-                                //
-                                SharedPreferences.Editor editor = sharedpreferences.edit();
-                                pending_responses.add("send whatsapp message to"+title+"  "+response);  // add response to the set
-                                editor.putStringSet("pending_responses",pending_responses);  // save the set
-                                editor.apply();
-                                //
-                                text_to_say="your phone is locked, this message will be sent when you unlock it";
-                                Speak speak=new Speak();
-                                speak.execute();
-                                //
-                            }
-                        }else{
-                            if(mode.equals("sms_mode")){
-                                sendSMSMessage(response); // send sms
-                            }else{
-                                // either in chatting mode // or no mode // user has not yet activated any mode
-                                send_message_on_whatsapp(response);// send directly to whatsapp
-                            }
-                        }
-                        //
-                    }else if(packageName.equals(sms_package_name)){
-                        sendSMSMessage(response); //
-                    }else if(packageName.equals(messenger)){
-                        // reply to messenger
-                        if(!isPhoneLocked()){
-                            sendToMessenger(response,messenger);
-                        }else{
-                            text_to_say="your phone is locked, please switch to chatting mode to enable notify to send your response on messenger";
-                            Speak speak=new Speak();
-                            speak.execute();
-                        }
-                        //
-                    }else if(packageName.equals(messenger_lite)){
-                        // reply to messenger lite
-                        if(!isPhoneLocked()){
-                            sendToMessenger(response,messenger_lite);
-                        }else{
-                            text_to_say="your phone is locked, please switch to chatting mode to enable notify to send your response on messenger lite";
-                            Speak speak=new Speak();
-                            speak.execute();
-                        }
-                        //
-                    }else{
-                        //proceed with next intent in the list
-                        try{
-                            list_of_notifications.remove(0);
-                            if(!list_of_notifications.isEmpty()){
-                                process_notification(); // process the intent which is now on the position 0
-                            }else{
-                                audioManager.abandonAudioFocus(audioFocusChangeListener);
-                                notification_in_process=false; // after processing all intents inside the arraylist
-                            }
-                        }catch (IndexOutOfBoundsException ex){
-                            Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // onResults() of record audio else branch // not whatsapp ,not sms, not messenger");
-                        }
-                        //
-                    }
-                    //
-                }else{
-                    // for example user did not say anything // or other error like network
-                    Handler handler=new Handler();
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            try{
-                                list_of_notifications.remove(0);
-                                if(!list_of_notifications.isEmpty()){
-                                    process_notification(); // process the intent which is now on the position 0
-                                }else{
-                                    audioManager.abandonAudioFocus(audioFocusChangeListener);
-                                    notification_in_process=false; // after processing all intents inside the arraylist
-                                }
-                            }catch (IndexOutOfBoundsException ex){
-                                Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // onResults() of record audio else branch // not whatsapp ,not sms, not messenger");
-                            }
-                            //
-                        }
-                    },10000);
-                }
-                break;
-            }
-            default:
-                Log.e("onActivityResult","default case");
-        }
-    }
-
     BroadcastReceiver receiver_for_handling_peding_requests=new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -1526,5 +1406,32 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             }
         }
     };
+
+    private void vibrate_phone(){
+        Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        // Vibrate for 500 milliseconds
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+            if(v != null){
+                v.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE));
+            }
+        }else{
+            //deprecated in API 26
+            if(v != null){
+                v.vibrate(500);
+            }
+        }
+    }
+
+    private void create_speech_recognizer(){
+        mSpeechRecognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,
+                getApplication().getPackageName());
+        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+        // create a recognizer
+        mSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);  // this ---> context
+        mSpeechRecognizer.setRecognitionListener(this); // this ---> RecognitionListener interface
+    }
 
 }

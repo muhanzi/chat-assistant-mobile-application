@@ -12,7 +12,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -23,7 +22,6 @@ import android.speech.tts.TextToSpeech;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
-import android.widget.Button;
 import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
@@ -140,9 +138,9 @@ public class NotificationService extends NotificationListenerService {
                 .setSmallIcon(R.drawable.notify_icon)
                 .setColor(getColor(R.color.projectColorCode))
                 .setContentTitle(getString(R.string.app_name))
-                .setContentText("Notify is running in the background. Tap to open the app")
-                .setContentIntent(pendingIntent)
-                .build());
+                .setContentText("Notify is running in the background")
+                .build());  // .setContentIntent(pendingIntent) // will create new task of mainActivity // this will disturb recognition listener that was bound to previous mainActivity task
+                            // .setContentIntent(pendingIntent) // when click on this notification in the status bar it starts main activity // issue is the new task
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(new Intent(getApplicationContext(),TryService.class));
