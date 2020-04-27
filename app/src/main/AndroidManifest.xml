@@ -27,6 +27,7 @@
         <activity
             android:name=".MainActivity"
             android:persistent="true"
+            android:screenOrientation="portrait"
             android:theme="@style/MainActivityTheme" />
         <activity
             android:name=".SplashScreen"

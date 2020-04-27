@@ -23,7 +23,6 @@ public class SpeakTextService extends Service {
     private TextToSpeech textToSpeech;
     private Context context;
     private String textToSay="";
-    private String TTS_finished_up;
     private SharedPreferences sharedpreferences;
 
     public SpeakTextService() {
@@ -56,28 +55,22 @@ public class SpeakTextService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId){
+        Log.e("SpeakTextService","SpeakTextService was started");
         boolean handling_pending_responses=sharedpreferences.getBoolean("handling_pending_responses",false); // default value --> false
         if(!handling_pending_responses){
             if(textToSpeech == null){
                 textToSpeech = initializeTextToSpeech();
                 textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
             }
-            //
             textToSay=intent.getStringExtra("textToSay");
-            if(TTS_finished_up != null){
-                Speak speak=new Speak();
-                speak.execute();
-            }
-            else{
-                Handler handler=new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        Speak speak=new Speak();
-                        speak.execute();
-                    }
-                },5000); // wait a bit so that Text to Speech finish initialization
-            }
+            Handler handler=new Handler();
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    Speak speak=new Speak();
+                    speak.execute();
+                }
+            },5000); // wait a bit so that Text to Speech finish initialization
         }
         //
         return super.onStartCommand(intent, flags, startId);
@@ -96,7 +89,6 @@ public class SpeakTextService extends Service {
                     } else {
                         Log.i("TTS", "Language Supported.");
                     }
-                    TTS_finished_up="true"; // setup finished
                     Log.i("TTS", "Initialization success.");
                 } else {
                     Toast.makeText(getApplicationContext(), "TTS Initialization failed!", Toast.LENGTH_SHORT).show();
@@ -136,22 +128,26 @@ public class SpeakTextService extends Service {
         @Override
         protected Void doInBackground(Void... voids) {
             //
-            int speechStatus = textToSpeech.speak(textToSay, TextToSpeech.QUEUE_FLUSH, null, null);
-            while(textToSpeech.isSpeaking()){
-                Log.i("tts","text to speech");
+            if(!textToSay.equals("")){
+                int speechStatus = textToSpeech.speak(textToSay, TextToSpeech.QUEUE_FLUSH, null, null);
+                while(textToSpeech.isSpeaking()){
+                    Log.i("tts","text to speech  // saying the message");
+                }
             }
-            //
-            textToSpeech.stop();  // don't shut it down
-            Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
-            LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
-            //
             return null;
         }
 
         @Override
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
-
+            boolean handling_pending_responses=sharedpreferences.getBoolean("handling_pending_responses",false); // default value --> false
+            if(!handling_pending_responses){
+                if(!textToSay.equals("")){
+                    textToSay="";
+                    Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
+                    LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
+                }
+            }
         }
     }
 }

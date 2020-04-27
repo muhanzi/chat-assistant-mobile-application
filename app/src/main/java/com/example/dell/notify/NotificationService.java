@@ -155,7 +155,8 @@ public class NotificationService extends NotificationListenerService {
         boolean mainActivityIsActive=sharedpreferences.getBoolean("MainActivityIsActive",true); // in case sharedpreferences does not provide data, the default value of this boolean we set it to false // we assume that the activity is running
         if(!mainActivityIsActive){
             Intent intent = new Intent(this, MainActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            intent.setAction(Intent.ACTION_MAIN);
+            intent.addCategory(Intent.CATEGORY_LAUNCHER); // as if user has clicked on the app to launch it
             startActivity(intent);
             MainActivity mainActivity = MainActivity.instance;
             mainActivity.startNow();

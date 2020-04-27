@@ -1,5 +1,6 @@
 package com.example.dell.notify;
 
+import android.Manifest;
 import android.app.KeyguardManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -11,6 +12,7 @@ import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
@@ -58,8 +60,10 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
             SharedPreferences.Editor editor = sharedpreferences.edit();
             if(null != pending_responses && !pending_responses.isEmpty()){
                 //local broadcast
-                Intent pending_responses_intent = new Intent("pending_responses"); // action --> "pending_responses"
+                Intent pending_responses_intent = new Intent("pending_responses"); // for SpeakTextService
                 LocalBroadcastManager.getInstance(context).sendBroadcast(pending_responses_intent);
+                Intent handling_pending_responses_intent = new Intent("handling_pending_responses"); // for MainActivity
+                LocalBroadcastManager.getInstance(context).sendBroadcast(handling_pending_responses_intent);
                 editor.putBoolean("turn_on_notify",false);  // it means we first process pending responses
                 editor.putBoolean("handling_pending_responses",true);
                 editor.commit();
@@ -137,7 +141,6 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
             editor.putBoolean("handling_pending_responses",false);
             editor.commit();
             LocalBroadcastManager.getInstance(ctx).sendBroadcast(pending_responses_finished);
-
             return;
         }
         handler=new Handler();
@@ -164,7 +167,6 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
             editor.commit();
             Toast.makeText(ctx, "Notify was denied access to audio focus", Toast.LENGTH_LONG).show();
             LocalBroadcastManager.getInstance(ctx).sendBroadcast(pending_responses_finished);
-
         }
     }
 
@@ -209,7 +211,6 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                         try{
                             pending_list.remove(0);
                             if(!pending_list.isEmpty()){
-                                //
                                 send_message_on_whatsapp();
                             }else{
                                 // abandon audio focus
@@ -227,8 +228,7 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                                 editor2.putBoolean("handling_pending_responses",false);
                                 editor2.apply();
                                 LocalBroadcastManager.getInstance(ctx).sendBroadcast(pending_responses_finished);
-
-                                bring_main_activity_to_foreground();
+                                bring_app_to_foreground();
                             }
                         }catch(IndexOutOfBoundsException ex){
                             audioManager.abandonAudioFocus(audioFocusChangeListener);
@@ -239,7 +239,7 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                             editor.commit();
                             LocalBroadcastManager.getInstance(ctx).sendBroadcast(pending_responses_finished);
 
-                            bring_main_activity_to_foreground();
+                            bring_app_to_foreground();
                         }
                     }
                 },50000);  // give 50 seconds to google assistant to process
@@ -253,7 +253,7 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                 LocalBroadcastManager.getInstance(ctx).sendBroadcast(pending_responses_finished);
 
                 Log.i("PhoneUnlocked","pending_list.isEmpty()  --> true");
-                bring_main_activity_to_foreground();
+                bring_app_to_foreground();
             }
 
             return null;
@@ -266,11 +266,11 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
         }
     }
 
-    private void bring_main_activity_to_foreground(){
+    private void bring_app_to_foreground(){
         // move the app to the foreground
-        Intent intent = new Intent(ctx, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        ctx.startActivity(intent);
+        //just to bring back our app to the foreground  // works well
+        MainActivity mainActivity = MainActivity.instance;
+        mainActivity.bring_main_activity_to_foreground();
         //
     }
 
