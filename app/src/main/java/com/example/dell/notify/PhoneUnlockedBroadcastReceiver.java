@@ -82,6 +82,8 @@ public class PhoneUnlockedBroadcastReceiver extends BroadcastReceiver {
                 if (status == TextToSpeech.SUCCESS) {
                     //int ttsLang = textToSpeech.setLanguage(Locale.US);
                     int ttsLang = textToSpeech.setLanguage(Locale.getDefault());
+                    textToSpeech.setPitch((float) 1);
+                    textToSpeech.setSpeechRate((float) 0.92);
                     if (ttsLang == TextToSpeech.LANG_MISSING_DATA
                             || ttsLang == TextToSpeech.LANG_NOT_SUPPORTED) {
                         Log.e("TTS", "The Language is not supported!");

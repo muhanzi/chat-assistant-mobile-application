@@ -16,14 +16,33 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 public class SpeakTextService extends Service {
 
     private TextToSpeech textToSpeech;
     private Context context;
     private String textToSay="";
+    private String type="";
+    private String packageName="";
+    private String title="";
+    private String notification="";
     private SharedPreferences sharedpreferences;
+    private RequestQueue queue;
+    private static final String TAG="volley queue";
 
     public SpeakTextService() {
     }
@@ -36,6 +55,8 @@ public class SpeakTextService extends Service {
         context=getApplicationContext();
         sharedpreferences = PreferenceManager.getDefaultSharedPreferences(context);
         LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("pending_responses"));
+        // Instantiate the RequestQueue.
+        queue = Volley.newRequestQueue(this);
     }
 
     BroadcastReceiver broadcastReceiver=new BroadcastReceiver() {
@@ -63,6 +84,12 @@ public class SpeakTextService extends Service {
                 textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
             }
             textToSay=intent.getStringExtra("textToSay");
+            type=intent.getStringExtra("type");
+            if(type.equals("notification")){
+                notification=intent.getStringExtra("notification");
+                packageName=intent.getStringExtra("package");
+                title=intent.getStringExtra("title");
+            }
             Handler handler=new Handler();
             handler.postDelayed(new Runnable() {
                 @Override
@@ -83,6 +110,8 @@ public class SpeakTextService extends Service {
                 if (status == TextToSpeech.SUCCESS) {
                     //int ttsLang = textToSpeech.setLanguage(Locale.US);
                     int ttsLang = textToSpeech.setLanguage(Locale.getDefault());
+                    textToSpeech.setPitch((float) 1);
+                    textToSpeech.setSpeechRate((float) 0.92);
                     if (ttsLang == TextToSpeech.LANG_MISSING_DATA
                             || ttsLang == TextToSpeech.LANG_NOT_SUPPORTED) {
                         Log.e("TTS", "The Language is not supported!");
@@ -141,13 +170,96 @@ public class SpeakTextService extends Service {
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
             boolean handling_pending_responses=sharedpreferences.getBoolean("handling_pending_responses",false); // default value --> false
+            String gmail="com.google.android.gm",instagram="com.instagram.android",twitter="com.twitter.android";
             if(!handling_pending_responses){
                 if(!textToSay.equals("")){
                     textToSay="";
-                    Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
-                    LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
+                    if(type.equals("message") || packageName.equals(gmail) || packageName.equals(instagram) || packageName.equals(twitter)){
+                        type="";
+                        packageName="";
+                        notification="";
+                        Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
+                        LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
+                    }else{
+                        filter_notification(notification);
+                    }
                 }
             }
         }
+    }
+
+
+    private void filter_notification(final String notification_text) {
+
+        String url = "https://plino.herokuapp.com/api/v1/classify/";  // we use the plino rest api
+
+        Map<String,String> map = new HashMap<>();
+        map.put("email_text",notification_text);
+
+        JSONObject jsonObject = new JSONObject(map);
+
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
+                (Request.Method.POST, url, jsonObject, new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+
+                            String email_class = response.getString("email_class"); // spam or ham
+                            //String email_text = response.getString("email_text");
+                            //int status = response.getInt("status"); // HTTP response codes // 200 for okay
+                            if(email_class.equals("spam")){
+                                // we display spams in ListView  // and save it in Firestore when we integrate it
+                                // report the spam // packageName,text,title,current date & time
+                                Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
+                                LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
+                                Log.i("SpamFilter","notification look like a spam: "+notification_text+" Spam from: "+packageName);
+                                Toast.makeText(context, "notification look like a spam: "+notification_text+" Spam from: "+packageName, Toast.LENGTH_SHORT).show();
+                            }else{
+                                // it's a ham
+                                Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
+                                LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
+                                Log.i("SpamFilter","Ham: "+notification_text);
+                            }
+
+                        } catch (JSONException e) {
+                            Log.e("JSONException",e.getMessage());
+                            Toast.makeText(context, "JSONException", Toast.LENGTH_SHORT).show();
+                        }
+
+                    }
+                }, new Response.ErrorListener() {
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        // error occurred // network, bad request,....
+                        Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
+                        LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
+                        Log.i("SpamFilter","onErrorResponse: "+error.getMessage());
+                        Toast.makeText(context, "SpamFilter onErrorResponse() "+error.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                }){
+            // the request headers // content-type // tokens,...
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String,String> headers = new HashMap<>();
+                headers.put("Content-Type", "application/json; charset=utf-8");
+                return headers;
+            }
+        };
+
+        jsonObjectRequest.setTag(TAG);
+        // Add the request to the RequestQueue.
+        queue.add(jsonObjectRequest);
+
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        if(queue != null){
+            queue.cancelAll(TAG);
+        }
+
     }
 }

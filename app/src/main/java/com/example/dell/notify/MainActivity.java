@@ -54,6 +54,8 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Toast;
 
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Locale;
@@ -528,7 +530,11 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             }
             case REQ_CODE_FOR_RECORD_AUDIO_PERMISSION:  // if permission is allowed then record audio
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
+                    if(SpeechRecognizer.isRecognitionAvailable(this)){ // just try and see
+                        mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
+                    }else{
+                        kill_activity();
+                    }
                 }else{
                     Toast.makeText(this, "permission to record audio is denied", Toast.LENGTH_SHORT).show();
                     remove_intent_after_delay();
@@ -694,58 +700,79 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
     }
 
+    /**
+     Here's the log statements right before the ERROR_CLIENT is sent to onError
+     // because the MainActivity was recreated // the SpeechRecognizer object was cleaned up
+     Log.e(TAG, "no selected voice recognition service");
+     Log.e(TAG, "bind to recognition service failed");
+     Log.e(TAG, "startListening() failed", e);
+     Log.e(TAG, "stopListening() failed", e);
+     Log.e(TAG, "cancel() failed", e);
+     Log.e(TAG, "not connected to the recognition service");
+     */
+
     @Override
     public void onError(int errorCode) {
-        //
+        empty_variables();
         String message;
         switch (errorCode) {
             case SpeechRecognizer.ERROR_AUDIO:
-                message = "Audio recording error";
+                message = "Audio recording error"; // fails to record
+                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
-                process_intent_again(); //
+                kill_activity();
                 break;
             case SpeechRecognizer.ERROR_CLIENT:
-                message = "Client side error";
+                message = "other Client side error";
+                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
-                process_intent_again(); //
+                kill_activity();
                 break;
             case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
                 message = "Insufficient permissions";
+                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
                 remove_intent_after_delay();
                 break;
             case SpeechRecognizer.ERROR_NETWORK:
                 message = "Network error";
+                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
-                process_intent_again(); //
+                remove_intent_after_delay(); //
                 break;
             case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
                 message = "Network timeout";
+                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
                 process_intent_again(); //
                 break;
             case SpeechRecognizer.ERROR_NO_MATCH:
                 message = "No match";
+                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
                 process_intent_again(); //
                 break;
             case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
                 message = "RecognitionService busy";
+                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
                 process_intent_again(); //
                 break;
             case SpeechRecognizer.ERROR_SERVER:
                 message = "error from server";
+                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
                 process_intent_again(); //
                 break;
             case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
-                message = "No speech input";
+                message = "No speech input";  // no response
+                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
                 remove_intent_after_delay();
                 break;
             default:
                 message = "Didn't understand, please try again.";
+                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
                 process_intent_again(); //
                 break;
@@ -882,16 +909,21 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 packageName = intent.getStringExtra("package");
                 title = intent.getStringExtra("title");
                 String text = intent.getStringExtra("text");
-                String sayText = title + " " + text;
+                String sayText = title + ": " + text;
                 //
                 if(packageName.equals(whatsapp_package_name) || packageName.equals(sms_package_name) || packageName.equals(messenger) || packageName.equals(messenger_lite)){
                     Intent speakService=  new Intent(this, SpeakTextService.class);
                     speakService.putExtra("textToSay","you have received  a new message from"+ sayText);
+                    speakService.putExtra("type","message");
                     startService(speakService);
                 }else{
                     // package name does not require any response // we don't provide response for other apps like browsers,...
                     Intent speakService=  new Intent(this, SpeakTextService.class);
                     speakService.putExtra("textToSay","you have received  a new notification: "+ sayText);
+                    speakService.putExtra("type","notification");
+                    speakService.putExtra("notification",text);
+                    speakService.putExtra("package",packageName);
+                    speakService.putExtra("title",title);
                     startService(speakService);
                 }
                 //
@@ -937,7 +969,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             try {
                 sms_to_phone_number=list_of_notifications.get(0).getStringExtra("number");
                 if(isValidPhoneNumber()){
-                    int speechStatus = textToSpeech.speak(" if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
+                    int speechStatus = textToSpeech.speak(" if you would like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
                     while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
                         Log.i("tts","text to speech // SMS Message");
                     }
@@ -954,7 +986,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 Log.i("Exception","IndexOutOfBoundsException // continue_process_notification // packageName --> sms");
             }
         }else if(packageName.equals(messenger) || packageName.equals(messenger_lite)){
-            int speechStatus = textToSpeech.speak(" if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
+            int speechStatus = textToSpeech.speak(" if you would like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
             while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
                 Log.i("tts","text to speech");
             }
@@ -1034,6 +1066,8 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 if (status == TextToSpeech.SUCCESS) {
                     //int ttsLang = textToSpeech.setLanguage(Locale.US);
                     int ttsLang = textToSpeech.setLanguage(Locale.getDefault());
+                    textToSpeech.setPitch((float) 1); // is the tone
+                    textToSpeech.setSpeechRate((float) 0.92);  // speed
                     if (ttsLang == TextToSpeech.LANG_MISSING_DATA
                             || ttsLang == TextToSpeech.LANG_NOT_SUPPORTED) {
                         Log.e("TTS", "The Language is not supported!");
@@ -1104,7 +1138,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
     @Override
     public void onBackPressed() {
-          //to disable back button // just remove  super.onBackPressed();
+        //to disable back button // just remove  super.onBackPressed();
         Toast.makeText(this, "please use the home button to leave the app", Toast.LENGTH_LONG).show();
         vibrate_phone();
         return;
@@ -1139,27 +1173,27 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         @Override
         protected Void doInBackground(Void... voids) {
             // Get Contact list from Phone
-                if (cursor.getCount() != 0) {
-                    try{
-                        String name;
-                        while (cursor.moveToNext()) {
-                            name=cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)).trim().replaceAll("\\s","");
-                            Log.e("whatsapp","title is: "+title+" contact: "+name);
-                            if(matchContactName(title.trim().replaceAll("\\s",""),name)){
-                                Log.e("MessageTitle","message title was found in contacts");
-                                contact_name = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
-                                sms_to_phone_number = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)).replaceAll("\\s","");
-                                break;
-                            }else{
-                                Log.e("MessageTitle","message title did not match current contact");
-                            }
+            if (cursor.getCount() != 0) {
+                try{
+                    String name;
+                    while (cursor.moveToNext()) {
+                        name=cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)).trim().replaceAll("\\s","");
+                        Log.e("whatsapp","title is: "+title+" contact: "+name);
+                        if(matchContactName(title.trim().replaceAll("\\s",""),name)){
+                            Log.e("MessageTitle","message title was found in contacts");
+                            contact_name = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
+                            sms_to_phone_number = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)).replaceAll("\\s","");
+                            break;
+                        }else{
+                            Log.e("MessageTitle","message title did not match current contact");
                         }
-                    }catch(CursorIndexOutOfBoundsException ex){
-                        Log.e("cursor","CursorIndexOutOfBoundsException occurred");
                     }
-                }else {
-                    Log.e("Cursor ", "Number of contacts is 0");
+                }catch(CursorIndexOutOfBoundsException ex){
+                    Log.e("cursor","CursorIndexOutOfBoundsException occurred");
                 }
+            }else {
+                Log.e("Cursor ", "Number of contacts is 0");
+            }
             //
 
             return null;
@@ -1190,17 +1224,15 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     }
 
     private void start_recording(){
-        int speechStatus = textToSpeech.speak("if you would you like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
+        int speechStatus = textToSpeech.speak(" if you would like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
         while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
             Log.i("tts","text to speech // whatsapp // if you would...");
         }
         if(!textToSpeech.isSpeaking()) {
             check_record_audio_permission();
-
         }else{
             textToSpeech.stop();
             check_record_audio_permission();
-
         }
     }
     //
@@ -1402,7 +1434,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         @Override
         public void onReceive(Context context, Intent intent) {
             if(textToSpeech != null){
-                    textToSpeech.stop();
+                textToSpeech.stop();
             }
         }
     };
@@ -1432,6 +1464,23 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         // create a recognizer
         mSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);  // this ---> context
         mSpeechRecognizer.setRecognitionListener(this); // this ---> RecognitionListener interface
+    }
+
+    private void kill_activity(){
+//        finish();
+//        overridePendingTransition(0, 0);
+//        startActivity(getIntent());
+//        overridePendingTransition(0, 0);
+        this.onDestroy();  // so that SpeechRecognizer can be recreated afresh
+        startActivity(getIntent());
+    }
+
+    private void empty_variables(){
+        packageName="";
+        title="";
+        sms_to_phone_number="";
+        contact_name="";
+        text_to_say="";
     }
 
 }
