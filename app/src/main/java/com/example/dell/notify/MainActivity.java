@@ -54,8 +54,6 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Toast;
 
-import org.json.JSONObject;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Locale;
@@ -533,12 +531,11 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     if(SpeechRecognizer.isRecognitionAvailable(this)){ // just try and see
                         mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
                     }else{
-                        kill_activity();
+                        Toast.makeText(this, "you device does not support speech recognition", Toast.LENGTH_LONG).show();
+                        remove_intent_after_delay();
                     }
                 }else{
-                    Toast.makeText(this, "permission to record audio is denied", Toast.LENGTH_SHORT).show();
-                    remove_intent_after_delay();
-                    //
+                    record_audio_denied();
                 }
                 break;
             case REQ_CODE_FOR_RECORD_AUDIO_PERMISSION2:
@@ -633,7 +630,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         handler.postDelayed(new Runnable(){
             @Override
             public void run(){
-                int speechStatus = textToSpeech.speak("send whatsapp message to"+title+"  "+text, TextToSpeech.QUEUE_FLUSH, null, null);
+                int speechStatus = textToSpeech.speak("send whatsapp message to "+title+"  "+text, TextToSpeech.QUEUE_FLUSH, null, null);
                 while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
                     Log.i("tts","text to speech");
                 }
@@ -671,7 +668,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         mSpeechRecognizer.destroy();  // SpeechRecognizer uses a single instance only
         // when user clicks back button onDestroy() will be called that means we need to destroy the object of SpeechRecognizer so that when the activity launches again the SpeechRecognizer recreates the instance
         // during onPause() SpeechRecognizer will clean up its object // remember onPause() comes before onDestroy()
-        // still SpeechRecognizer doesn't work when the activity is created again // !!!!!!!!
+        // still SpeechRecognizer doesn't work when the activity is created again // !!!!!!!! // try again
     }
 
     // for RegisterListener Interface
@@ -718,61 +715,61 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         switch (errorCode) {
             case SpeechRecognizer.ERROR_AUDIO:
                 message = "Audio recording error"; // fails to record
-                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
-                kill_activity();
+                remove_intent_after_delay();
                 break;
             case SpeechRecognizer.ERROR_CLIENT:
                 message = "other Client side error";
-                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
-                kill_activity();
+                remove_intent_after_delay();
                 break;
             case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
                 message = "Insufficient permissions";
-                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
                 remove_intent_after_delay();
                 break;
             case SpeechRecognizer.ERROR_NETWORK:
                 message = "Network error";
-                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
                 remove_intent_after_delay(); //
                 break;
             case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
                 message = "Network timeout";
-                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
                 process_intent_again(); //
                 break;
             case SpeechRecognizer.ERROR_NO_MATCH:
                 message = "No match";
-                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
                 process_intent_again(); //
                 break;
             case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
                 message = "RecognitionService busy";
-                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
                 process_intent_again(); //
                 break;
             case SpeechRecognizer.ERROR_SERVER:
                 message = "error from server";
-                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
                 process_intent_again(); //
                 break;
             case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
                 message = "No speech input";  // no response
-                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
                 remove_intent_after_delay();
                 break;
             default:
                 message = "Didn't understand, please try again.";
-                Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
                 process_intent_again(); //
                 break;
@@ -793,7 +790,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     // either in chatting mode // or no mode // user has not yet activated any mode
                     //
                     SharedPreferences.Editor editor = sharedpreferences.edit();
-                    pending_responses.add("send whatsapp message to"+title+"  "+response);  // add response to the set
+                    pending_responses.add("send whatsapp message to "+title+"  "+response);  // add response to the set
                     editor.putStringSet("pending_responses",pending_responses);  // save the set
                     editor.apply();
                     //
@@ -1466,21 +1463,38 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         mSpeechRecognizer.setRecognitionListener(this); // this ---> RecognitionListener interface
     }
 
-    private void kill_activity(){
-//        finish();
-//        overridePendingTransition(0, 0);
-//        startActivity(getIntent());
-//        overridePendingTransition(0, 0);
-        this.onDestroy();  // so that SpeechRecognizer can be recreated afresh
-        startActivity(getIntent());
-    }
-
     private void empty_variables(){
         packageName="";
         title="";
         sms_to_phone_number="";
         contact_name="";
         text_to_say="";
+    }
+
+    private void record_audio_denied(){
+        empty_variables();
+        if(checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED){
+            // permission is already allowed but due to error that happened with the single instance of SpeechRecognizer when MainActivity was restarted // permission now becomes denied until the connection between mainActivity and SpeechRecognizer instance is established again // the system denies us permission
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    try{
+                        list_of_notifications.remove(0);
+                        if(!list_of_notifications.isEmpty()){
+                            process_notification();
+                        }else{
+                            audioManager.abandonAudioFocus(audioFocusChangeListener);
+                            notification_in_process=false; // after processing all intents inside the arraylist
+                        }
+                    }catch (IndexOutOfBoundsException ex){
+                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // record_audio_denied() ");
+                    }
+                }
+            },60000); // 1 min
+        }else{
+            Toast.makeText(this, "permission to record audio is denied", Toast.LENGTH_SHORT).show();
+            remove_intent_after_delay();
+        }
     }
 
 }

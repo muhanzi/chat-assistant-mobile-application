@@ -178,6 +178,7 @@ public class SpeakTextService extends Service {
                         type="";
                         packageName="";
                         notification="";
+                        title="";
                         Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
                         LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
                     }else{
