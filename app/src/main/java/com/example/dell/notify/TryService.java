@@ -1,4 +1,4 @@
-package com.example.dell.newproject2;
+package com.example.dell.notify;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -62,11 +62,11 @@ public class TryService extends Service {
         this.startForeground(NOTIF_ID, new NotificationCompat.Builder(this,  //!!! I changed this ---> startForeground(NOTIF_ID, new NotificationCompat.Builder(this,
                 NOTIF_CHANNEL_ID)
                 .setOngoing(true)
-                .setSmallIcon(R.drawable.notif_icon)
+                .setSmallIcon(R.drawable.notify_icon)
+                .setColor(getColor(R.color.projectColorCode))
                 .setContentTitle(getString(R.string.app_name))
-                .setContentText("TryService is running in the background")
-                .setContentIntent(pendingIntent)
-                .build());
+                .setContentText("Reads aloud all your notifications and Replies for you")
+                .build());  // .setContentIntent(pendingIntent) // will create new task of mainActivity // this will disturb recognition listener that was bound to previous mainActivity task
     }
 
 
@@ -88,9 +88,10 @@ public class TryService extends Service {
 
     private void show_notification_after_one_minute(){
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, NOTIF_CHANNEL_ID2)
-                .setSmallIcon(R.drawable.notif_icon)
-                .setContentTitle("Notification to repeat")
-                .setContentText("TryService is working well")
+                .setSmallIcon(R.drawable.notify_icon)
+                .setColor(getColor(R.color.projectColorCode))
+                .setContentTitle("Notify")
+                .setContentText("Your chat assistant")
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT);
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);

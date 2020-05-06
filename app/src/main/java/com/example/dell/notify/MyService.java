@@ -1,4 +1,4 @@
-package com.example.dell.newproject2;
+package com.example.dell.notify;
 
 import android.app.job.JobInfo;
 import android.app.job.JobParameters;
@@ -13,6 +13,7 @@ import android.provider.Settings;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.util.Log;
+
 
 public class MyService extends JobService {
 
@@ -101,10 +102,11 @@ public class MyService extends JobService {
 
     private void keep_scheduling_notification(JobParameters params){
         if(checkNotificationEnabled()){
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "1")
-                    .setSmallIcon(R.drawable.notif_icon)
-                    .setContentTitle("MyService Notification")
-                    .setContentText("JobScheduler is working inside MyService")
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "channel5")
+                    .setSmallIcon(R.drawable.notify_icon)
+                    .setColor(getColor(R.color.projectColorCode))
+                    .setContentTitle("Notify")
+                    .setContentText("Service is running")
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT);
 
             NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
