@@ -213,8 +213,8 @@ public class SpeakTextService extends Service {
                                 // report the spam // packageName,text,title,current date & time
                                 Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
                                 LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
-                                Log.i("SpamFilter","notification look like a spam: "+notification_text+" Spam from: "+packageName);
-                                Toast.makeText(context, "notification look like a spam: "+notification_text+" Spam from: "+packageName, Toast.LENGTH_SHORT).show();
+                                Log.i("SpamFilter","notification looks like a spam: "+notification_text+" Spam from: "+packageName);
+                                Toast.makeText(context, "notification looks like a spam: "+notification_text+" Spam from: "+packageName, Toast.LENGTH_SHORT).show();
                             }else{
                                 // it's a ham
                                 Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
@@ -224,7 +224,7 @@ public class SpeakTextService extends Service {
 
                         } catch (JSONException e) {
                             Log.e("JSONException",e.getMessage());
-                            Toast.makeText(context, "JSONException", Toast.LENGTH_SHORT).show();
+                            //Toast.makeText(context, "JSONException", Toast.LENGTH_SHORT).show();
                         }
 
                     }
@@ -236,7 +236,7 @@ public class SpeakTextService extends Service {
                         Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
                         LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
                         Log.i("SpamFilter","onErrorResponse: "+error.getMessage());
-                        Toast.makeText(context, "SpamFilter onErrorResponse() "+error.getMessage(), Toast.LENGTH_SHORT).show();
+                       // Toast.makeText(context, "SpamFilter onErrorResponse() "+error.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 }){
             // the request headers // content-type // tokens,...

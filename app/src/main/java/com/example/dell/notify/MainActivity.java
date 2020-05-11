@@ -107,7 +107,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     public static MainActivity instance;
     //
     private KeyguardManager keyguardManager;
-    private final int REQ_CODE_SPEAK = 100;
     //
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -166,7 +165,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         Set<String> empty_set = new HashSet<>();
         pending_responses= sharedpreferences.getStringSet("pending_responses",empty_set); // default value is an empty set // that means there were no pending responses
         //
-
         keyguardManager = (KeyguardManager) this.getSystemService(Context.KEYGUARD_SERVICE);
 
         button_start_now.setOnClickListener(new View.OnClickListener() {  // after enabling notification listener in the settings
@@ -325,6 +323,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         if(mSpeechRecognizer == null){
             create_speech_recognizer();
         }
+        change_sleep_timeout();
     }
 
     @Override
@@ -603,8 +602,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
     private void check_permissions(){
         ActivityCompat.requestPermissions(this,
-                new String[]{Manifest.permission.SEND_SMS,Manifest.permission.READ_SMS,Manifest.permission.RECEIVE_SMS,Manifest.permission.RECORD_AUDIO,Manifest.permission.READ_CONTACTS},
-                REQ_CODE_PERMISSIONS_FOR_SMS_AUDIO_CONTACTS);
+                new String[]{Manifest.permission.SEND_SMS,Manifest.permission.READ_SMS,Manifest.permission.RECEIVE_SMS,Manifest.permission.RECORD_AUDIO,Manifest.permission.READ_CONTACTS},REQ_CODE_PERMISSIONS_FOR_SMS_AUDIO_CONTACTS);
     }
 
     private void process_intent_again(){
@@ -1494,6 +1492,16 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         }else{
             Toast.makeText(this, "permission to record audio is denied", Toast.LENGTH_SHORT).show();
             remove_intent_after_delay();
+        }
+    }
+
+    private void change_sleep_timeout(){
+        if(Settings.System.canWrite(this)){  // when permission to change settings is allowed
+            Settings.System.putInt(getContentResolver(),Settings.System.SCREEN_OFF_TIMEOUT, 120000);
+        }else{
+            // when permission to write settings is not yet given
+            Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
+            startActivity(intent);
         }
     }
 
