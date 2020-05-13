@@ -170,11 +170,11 @@ public class SpeakTextService extends Service {
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
             boolean handling_pending_responses=sharedpreferences.getBoolean("handling_pending_responses",false); // default value --> false
-            String gmail="com.google.android.gm",instagram="com.instagram.android",twitter="com.twitter.android";
+            String gmail="com.google.android.gm",instagram="com.instagram.android",twitter="com.twitter.android",systemUI="com.android.systemui";
             if(!handling_pending_responses){
                 if(!textToSay.equals("")){
                     textToSay="";
-                    if(type.equals("message") || packageName.equals(gmail) || packageName.equals(instagram) || packageName.equals(twitter)){
+                    if(type.equals("message") || packageName.equals(gmail) || packageName.equals(instagram) || packageName.equals(twitter) || packageName.equals(systemUI)){
                         type="";
                         packageName="";
                         notification="";

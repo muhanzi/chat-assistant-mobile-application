@@ -54,7 +54,6 @@ public class TryService extends Service {
 
     private void startforeground() {
         Intent notificationIntent = new Intent(this, MainActivity.class);
-
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
                 notificationIntent, 0);
 

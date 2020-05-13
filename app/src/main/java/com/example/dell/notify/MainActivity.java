@@ -19,6 +19,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.CursorIndexOutOfBoundsException;
 import android.media.AudioManager;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.BatteryManager;
 import android.os.Build;
@@ -166,6 +167,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         pending_responses= sharedpreferences.getStringSet("pending_responses",empty_set); // default value is an empty set // that means there were no pending responses
         //
         keyguardManager = (KeyguardManager) this.getSystemService(Context.KEYGUARD_SERVICE);
+        change_sleep_timeout();
 
         button_start_now.setOnClickListener(new View.OnClickListener() {  // after enabling notification listener in the settings
             @Override
@@ -323,7 +325,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         if(mSpeechRecognizer == null){
             create_speech_recognizer();
         }
-        change_sleep_timeout();
     }
 
     @Override
@@ -460,6 +461,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         while(textToSpeech.isSpeaking()){
             Log.i("sms","response");
         }
+        empty_variables();
         if(!textToSpeech.isSpeaking()){
             handler.postDelayed(new Runnable() {
                 @Override
@@ -528,7 +530,13 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             case REQ_CODE_FOR_RECORD_AUDIO_PERMISSION:  // if permission is allowed then record audio
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     if(SpeechRecognizer.isRecognitionAvailable(this)){ // just try and see
-                        mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
+                        if(mSpeechRecognizer != null){
+                            mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
+                        }else{
+                            create_speech_recognizer();
+                            mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
+                            Log.e("mSpeechRecognizer","mSpeechRecognizer is null");
+                        }
                     }else{
                         Toast.makeText(this, "you device does not support speech recognition", Toast.LENGTH_LONG).show();
                         remove_intent_after_delay();
@@ -542,8 +550,17 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     //Toast.makeText(this, "permission is granted ok ok", Toast.LENGTH_SHORT).show();
                     Log.i("RecordAudio","permission is granted ok ok");
                 }else{
-                    //Toast.makeText(this, "permission to record audio is denied", Toast.LENGTH_SHORT).show();
                     Log.i("RecordAudio","permission to record audio is denied");
+                    if(this.hasWindowFocus()){
+                        Log.i("hasWindowFocus","permission is denied");
+                        //Toast.makeText(this, "hasWindowFocus --> permission is is denied", Toast.LENGTH_SHORT).show();
+                    }else{
+                        Log.i("No WindowFocus","permission is denied");
+                        //Toast.makeText(this, "No WindowFocus --> permission is is denied", Toast.LENGTH_SHORT).show();
+                        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK & Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(intent);
+                    }
                 }
                 break;
             case REQ_CODE_FOR_ACCESS_CONTACTS:
@@ -637,6 +654,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                     public void run(){
                         // bring MainActivity to the foreground // so that notification service stays alive
                         bring_main_activity_to_foreground();
+                        empty_variables();
                         //
                         try{
                             textToSpeech.stop();
@@ -663,7 +681,10 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         SharedPreferences.Editor editor = sharedpreferences.edit();
         editor.putBoolean("MainActivityIsActive",false);
         editor.commit();
-        mSpeechRecognizer.destroy();  // SpeechRecognizer uses a single instance only
+        if(mSpeechRecognizer!=null){
+            mSpeechRecognizer.destroy();
+        }
+        // SpeechRecognizer uses a single instance only
         // when user clicks back button onDestroy() will be called that means we need to destroy the object of SpeechRecognizer so that when the activity launches again the SpeechRecognizer recreates the instance
         // during onPause() SpeechRecognizer will clean up its object // remember onPause() comes before onDestroy()
         // still SpeechRecognizer doesn't work when the activity is created again // !!!!!!!! // try again
@@ -751,7 +772,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 message = "RecognitionService busy";
                 //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
-                process_intent_again(); //
+                speechRecognizerIsBusy();
                 break;
             case SpeechRecognizer.ERROR_SERVER:
                 message = "error from server";
@@ -842,6 +863,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             }catch (IndexOutOfBoundsException ex){
                 Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // onResults() of record audio else branch // not whatsapp ,not sms, not messenger");
             }
+            empty_variables();
             //
         }
     }
@@ -1376,6 +1398,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             @Override
             public void run() {
                 bring_main_activity_to_foreground();
+                empty_variables();
                 try {
                     list_of_notifications.remove(0);
                     if(!list_of_notifications.isEmpty()){
@@ -1404,13 +1427,19 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         //just to bring back our app to the foreground
         ActivityCompat.requestPermissions(MainActivity.this,
                 new String[]{Manifest.permission.RECORD_AUDIO},
-                REQ_CODE_FOR_RECORD_AUDIO_PERMISSION2);
+                REQ_CODE_FOR_RECORD_AUDIO_PERMISSION2); // we just simulate this request
         //
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        if(mSpeechRecognizer!=null){
+            mSpeechRecognizer.stopListening();
+            mSpeechRecognizer.cancel();
+            mSpeechRecognizer.destroy();
+        }
+        mSpeechRecognizer=null;
         unregisterReceiver(phoneUnlockedReceiver);
     }
 
@@ -1470,25 +1499,21 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     }
 
     private void record_audio_denied(){
-        empty_variables();
         if(checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED){
             // permission is already allowed but due to error that happened with the single instance of SpeechRecognizer when MainActivity was restarted // permission now becomes denied until the connection between mainActivity and SpeechRecognizer instance is established again // the system denies us permission
-            handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    try{
-                        list_of_notifications.remove(0);
-                        if(!list_of_notifications.isEmpty()){
-                            process_notification();
-                        }else{
-                            audioManager.abandonAudioFocus(audioFocusChangeListener);
-                            notification_in_process=false; // after processing all intents inside the arraylist
-                        }
-                    }catch (IndexOutOfBoundsException ex){
-                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // record_audio_denied() ");
-                    }
+            if(SpeechRecognizer.isRecognitionAvailable(this)){ // just try and see
+                if(mSpeechRecognizer != null){
+                    mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
+                }else{
+                    //Toast.makeText(this, "record_audio_denied //mSpeechRecognizer == null", Toast.LENGTH_LONG).show();
+                    Log.e("record_audio_denied","mSpeechRecognizer == null //restart speech recognizer");
+                    create_speech_recognizer();
+                    mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
                 }
-            },60000); // 1 min
+            }else{
+                Toast.makeText(this, "you device does not support speech recognition", Toast.LENGTH_LONG).show();
+                remove_intent_after_delay();
+            }
         }else{
             Toast.makeText(this, "permission to record audio is denied", Toast.LENGTH_SHORT).show();
             remove_intent_after_delay();
@@ -1501,8 +1526,19 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         }else{
             // when permission to write settings is not yet given
             Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
+            intent.setData(Uri.parse("package:" + getPackageName()));
             startActivity(intent);
         }
+    }
+
+    private void speechRecognizerIsBusy(){
+        if(mSpeechRecognizer!=null){
+            mSpeechRecognizer.stopListening();
+            mSpeechRecognizer.cancel();
+            mSpeechRecognizer.destroy();
+        }
+        mSpeechRecognizer=null;
+        process_intent_again();
     }
 
 }

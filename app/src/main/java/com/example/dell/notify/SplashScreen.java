@@ -21,7 +21,7 @@ public class SplashScreen extends AppCompatActivity {
             @Override
             public void run() {
                 Intent mainActivity = new Intent(SplashScreen.this, MainActivity.class);
-                mainActivity.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                mainActivity.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK & Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(mainActivity);
                 finish();
             }

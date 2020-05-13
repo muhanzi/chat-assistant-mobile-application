@@ -127,7 +127,6 @@ public class NotificationService extends NotificationListenerService {
 
     private void startforeground() {
         Intent notificationIntent = new Intent(this, MainActivity.class);
-
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
                 notificationIntent, 0);
 
