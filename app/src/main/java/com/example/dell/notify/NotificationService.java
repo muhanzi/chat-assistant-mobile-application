@@ -117,7 +117,7 @@ public class NotificationService extends NotificationListenerService {
             String packageName = noti.getPackageName();
             Bundle extras = noti.getNotification().extras;
 
-            say_the_text("Notify is now running in the background");
+            say_the_text("Notify is now running in the background. Tap to open");
             //
         }
         STATUS_BAR_READ_ONCE=true; // status bar is read already
@@ -138,8 +138,8 @@ public class NotificationService extends NotificationListenerService {
                 .setColor(getColor(R.color.projectColorCode))
                 .setContentTitle(getString(R.string.app_name))
                 .setContentText("Notify is running in the background")
-                .build());  // .setContentIntent(pendingIntent) // will create new task of mainActivity // this will disturb recognition listener that was bound to previous mainActivity task
-                            // .setContentIntent(pendingIntent) // when click on this notification in the status bar it starts main activity // issue is the new task
+                .setContentIntent(pendingIntent)
+                .build());
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(new Intent(getApplicationContext(),TryService.class));
@@ -149,7 +149,7 @@ public class NotificationService extends NotificationListenerService {
         //
         // start main activity // only if it is not running
         SharedPreferences sharedpreferences = PreferenceManager.getDefaultSharedPreferences(context);
-        boolean mainActivityIsActive=sharedpreferences.getBoolean("MainActivityIsActive",true); // in case sharedpreferences does not provide data, the default value of this boolean we set it to false // we assume that the activity is running
+        boolean mainActivityIsActive=sharedpreferences.getBoolean("MainActivityIsActive",true); // in case sharedpreferences does not provide data, the default value of this boolean we set it to true // we assume that the activity is running
         if(!mainActivityIsActive){
             Intent intent = new Intent(this, MainActivity.class);
             intent.setAction(Intent.ACTION_MAIN);
@@ -180,7 +180,7 @@ public class NotificationService extends NotificationListenerService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CharSequence name = getString(R.string.channel_name2);
             String description = getString(R.string.channel_description2);
-            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            int importance = NotificationManager.IMPORTANCE_HIGH;
             NotificationChannel channel = new NotificationChannel(NOTIF_CHANNEL_ID, name, importance);
             channel.setDescription(description);
             // Register the channel with the system; you can't change the importance

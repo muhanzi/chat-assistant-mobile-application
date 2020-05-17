@@ -1,7 +1,9 @@
 package com.example.dell.notify;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Handler;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
@@ -21,9 +23,11 @@ public class SplashScreen extends AppCompatActivity {
             @Override
             public void run() {
                 Intent mainActivity = new Intent(SplashScreen.this, MainActivity.class);
-                mainActivity.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK & Intent.FLAG_ACTIVITY_NEW_TASK);
+                mainActivity.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK & Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                overridePendingTransition(0, 0); // works fine
                 startActivity(mainActivity);
                 finish();
+                overridePendingTransition(0, 0);
             }
         },2000);
     }

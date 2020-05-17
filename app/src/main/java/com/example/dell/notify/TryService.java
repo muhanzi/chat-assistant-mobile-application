@@ -65,7 +65,8 @@ public class TryService extends Service {
                 .setColor(getColor(R.color.projectColorCode))
                 .setContentTitle(getString(R.string.app_name))
                 .setContentText("Reads aloud all your notifications and Replies for you")
-                .build());  // .setContentIntent(pendingIntent) // will create new task of mainActivity // this will disturb recognition listener that was bound to previous mainActivity task
+                .setContentIntent(pendingIntent)
+                .build());
     }
 
 

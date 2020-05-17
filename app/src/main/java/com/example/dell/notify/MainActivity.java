@@ -455,13 +455,13 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         SmsManager smsManager = SmsManager.getDefault();
         smsManager.sendTextMessage(sms_to_phone_number, null, message, null, null);
         //
+        empty_variables();
         Handler handler=new Handler();
         Toast.makeText(getApplicationContext(), "SMS sent.",Toast.LENGTH_LONG).show();
         int speechStatus = textToSpeech.speak("message sent", TextToSpeech.QUEUE_FLUSH, null, null);
         while(textToSpeech.isSpeaking()){
             Log.i("sms","response");
         }
-        empty_variables();
         if(!textToSpeech.isSpeaking()){
             handler.postDelayed(new Runnable() {
                 @Override
@@ -555,11 +555,9 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                         Log.i("hasWindowFocus","permission is denied");
                         //Toast.makeText(this, "hasWindowFocus --> permission is is denied", Toast.LENGTH_SHORT).show();
                     }else{
-                        Log.i("No WindowFocus","permission is denied");
+                        Log.i("No WindowFocus","and permission was denied");
                         //Toast.makeText(this, "No WindowFocus --> permission is is denied", Toast.LENGTH_SHORT).show();
-                        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK & Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(intent);
+                        restart_mainActivity();
                     }
                 }
                 break;
@@ -649,12 +647,12 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
                     Log.i("tts","text to speech");
                 }
+                empty_variables();
                 handler.postDelayed(new Runnable(){
                     @Override
                     public void run(){
                         // bring MainActivity to the foreground // so that notification service stays alive
                         bring_main_activity_to_foreground();
-                        empty_variables();
                         //
                         try{
                             textToSpeech.stop();
@@ -683,11 +681,11 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         editor.commit();
         if(mSpeechRecognizer!=null){
             mSpeechRecognizer.destroy();
+            mSpeechRecognizer=null;
         }
         // SpeechRecognizer uses a single instance only
         // when user clicks back button onDestroy() will be called that means we need to destroy the object of SpeechRecognizer so that when the activity launches again the SpeechRecognizer recreates the instance
         // during onPause() SpeechRecognizer will clean up its object // remember onPause() comes before onDestroy()
-        // still SpeechRecognizer doesn't work when the activity is created again // !!!!!!!! // try again
     }
 
     // for RegisterListener Interface
@@ -730,6 +728,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     @Override
     public void onError(int errorCode) {
         empty_variables();
+        Speak speak=new Speak();
         String message;
         switch (errorCode) {
             case SpeechRecognizer.ERROR_AUDIO:
@@ -754,7 +753,8 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 message = "Network error";
                 //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
-                remove_intent_after_delay(); //
+                text_to_say="a network error occurred. please check your internet connection";
+                speak.execute();
                 break;
             case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
                 message = "Network timeout";
@@ -766,7 +766,11 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 message = "No match";
                 //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
-                process_intent_again(); //
+                int speechStatus = textToSpeech.speak(" Didn't understand, please try again.", TextToSpeech.QUEUE_FLUSH, null, null);
+                while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
+                    Log.i("tts","text to speech");
+                }
+                check_record_audio_permission();
                 break;
             case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
                 message = "RecognitionService busy";
@@ -784,13 +788,18 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 message = "No speech input";  // no response
                 //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
-                remove_intent_after_delay();
+                text_to_say="okay, no response";
+                speak.execute();
                 break;
             default:
-                message = "Didn't understand, please try again.";
+                message = "an error occurred, please try again.";
                 //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
                 Log.e("onError","RecognitioNListener error: "+message);
-                process_intent_again(); //
+                int speechStatus2 = textToSpeech.speak(" an error occurred, please try again.", TextToSpeech.QUEUE_FLUSH, null, null);
+                while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
+                    Log.i("tts","text to speech");
+                }
+                check_record_audio_permission();
                 break;
         }
     }
@@ -852,6 +861,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             //
         }else{
             //proceed with next intent in the list
+            empty_variables();
             try{
                 list_of_notifications.remove(0);
                 if(!list_of_notifications.isEmpty()){
@@ -863,7 +873,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             }catch (IndexOutOfBoundsException ex){
                 Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // onResults() of record audio else branch // not whatsapp ,not sms, not messenger");
             }
-            empty_variables();
             //
         }
     }
@@ -1153,14 +1162,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         //
     }
 
-    @Override
-    public void onBackPressed() {
-        //to disable back button // just remove  super.onBackPressed();
-        Toast.makeText(this, "please use the home button to leave the app", Toast.LENGTH_LONG).show();
-        vibrate_phone();
-        return;
-    }
-
     private void schedule_the_job(){
         JobInfo.Builder builder = new JobInfo.Builder(0, myServiceComponent);
         builder.setRequiresCharging(false);  // the job will run when  the system schedules it // so it doesn't require the device to be charging or not
@@ -1394,11 +1395,11 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         sendIntent.setPackage(messengerPackageName);
         startActivity(sendIntent);
         //
+        empty_variables();
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
                 bring_main_activity_to_foreground();
-                empty_variables();
                 try {
                     list_of_notifications.remove(0);
                     if(!list_of_notifications.isEmpty()){
@@ -1540,5 +1541,33 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         mSpeechRecognizer=null;
         process_intent_again();
     }
+
+    private void restart_mainActivity(){
+        Handler handler=new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK & Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                overridePendingTransition(0, 0); // works fine
+                startActivity(intent);
+            }
+        },3000);
+        //
+    }
+
+
+    // issues start here
+    @Override
+    public void onBackPressed() {
+        //to disable back button // just remove  super.onBackPressed();
+        Toast.makeText(this, "please use the home button to leave the app", Toast.LENGTH_LONG).show();
+        vibrate_phone();
+        return;
+    }
+
+    // save the instance of mainActivity during onStrop()
+
+    // check whether destroying recognizer in // case SpeechRecognizer.ERROR_AUDIO:
 
 }

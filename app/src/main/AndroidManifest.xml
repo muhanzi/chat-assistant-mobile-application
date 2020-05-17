@@ -29,6 +29,7 @@
         <activity
             android:name=".MainActivity"
             android:persistent="true"
+            android:launchMode="singleTask"
             android:screenOrientation="portrait"
             android:theme="@style/MainActivityTheme" />
         <activity
