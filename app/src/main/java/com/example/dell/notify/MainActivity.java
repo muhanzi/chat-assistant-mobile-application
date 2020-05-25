@@ -27,14 +27,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Messenger;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
 import android.preference.PreferenceManager;
 import android.provider.ContactsContract;
 import android.provider.Settings;
 import android.provider.Telephony;
-import android.speech.RecognitionListener;
-import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
@@ -71,9 +67,6 @@ public class MainActivity extends AppCompatActivity{
     private final int REQ_CODE_PERMISSIONS_FOR_SMS_AUDIO_CONTACTS=55;
     private TextToSpeech textToSpeech;
     //
-    private SpeechRecognizer mSpeechRecognizer;
-    private Intent mSpeechRecognizerIntent;
-    //
     private String CHANNEL_ID="1";
     private int notificationId=6; // it will be incrementing
     //
@@ -108,6 +101,8 @@ public class MainActivity extends AppCompatActivity{
     public static MainActivity instance;
     //
     private KeyguardManager keyguardManager;
+    private static boolean first_time_onStop_called = false;
+    private static boolean first_time_onStop_called2 = false;
     //
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -143,9 +138,6 @@ public class MainActivity extends AppCompatActivity{
             textToSpeech = initializeTextToSpeech();
             textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
         }
-        //
-        //create_speech_recognizer();
-        //
         audioManager = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
 
         // create notification channel
@@ -323,9 +315,6 @@ public class MainActivity extends AppCompatActivity{
         // broadcasts
         register_broadcast_for_phone_unlocked();
         //
-//        if(mSpeechRecognizer == null){
-//            create_speech_recognizer();
-//        }
     }
 
     @Override
@@ -363,6 +352,17 @@ public class MainActivity extends AppCompatActivity{
         SharedPreferences.Editor editor = sharedpreferences.edit();
         editor.putBoolean("MainActivityIsActive",true);
         editor.commit();
+        //
+        if(first_time_onStop_called && !first_time_onStop_called2){
+            if(checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED){
+                if(SpeechRecognizer.isRecognitionAvailable(this)){
+                    Intent recognitionService=  new Intent(this, RecognitionService.class);
+                    recognitionService.putExtra("first_time_onStop_called",true);
+                    startService(recognitionService);
+                    first_time_onStop_called2 =true;
+                }
+            }
+        }
     }
 
     @Override
@@ -530,16 +530,9 @@ public class MainActivity extends AppCompatActivity{
             }
             case REQ_CODE_FOR_RECORD_AUDIO_PERMISSION:  // if permission is allowed then record audio
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    if(SpeechRecognizer.isRecognitionAvailable(this)){ // just try and see
-//                        if(mSpeechRecognizer != null){
-//                            mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
-//                        }else{
-//                            create_speech_recognizer();
-//                            mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
-//                            Log.e("mSpeechRecognizer","mSpeechRecognizer is null");
-//                        }
-                        // start service
+                    if(SpeechRecognizer.isRecognitionAvailable(this)){
                         Intent recognitionService=  new Intent(this, RecognitionService.class);
+                        recognitionService.putExtra("first_time_onStop_called",false);
                         startService(recognitionService);
                     }else{
                         Toast.makeText(this, "you device does not support speech recognition", Toast.LENGTH_LONG).show();
@@ -553,6 +546,7 @@ public class MainActivity extends AppCompatActivity{
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     //Toast.makeText(this, "permission is granted ok ok", Toast.LENGTH_SHORT).show();
                     Log.i("RecordAudio","permission is granted ok ok");
+                    // will just come back to notify // will resume the MainActivity
                 }else{
                     Log.i("RecordAudio","permission to record audio is denied");
                     if(this.hasWindowFocus()){
@@ -683,228 +677,6 @@ public class MainActivity extends AppCompatActivity{
         SharedPreferences.Editor editor = sharedpreferences.edit();
         editor.putBoolean("MainActivityIsActive",false);
         editor.commit();
-//        if(mSpeechRecognizer!=null){
-//            mSpeechRecognizer.destroy();
-//            mSpeechRecognizer=null;
-//        }
-        // SpeechRecognizer uses a single instance only
-        // when user clicks back button onDestroy() will be called that means we need to destroy the object of SpeechRecognizer so that when the activity launches again the SpeechRecognizer recreates the instance
-        // during onPause() SpeechRecognizer will clean up its object // remember onPause() comes before onDestroy()
-    }
-
-    // for RegisterListener Interface
-//    @Override
-//    public void onReadyForSpeech(Bundle bundle) {
-//        notification_in_process=true; // don't read the next intent in the arrayList
-//    }
-//
-//    @Override
-//    public void onBeginningOfSpeech() {
-//        notification_in_process=true;
-//    }
-//
-//    @Override
-//    public void onRmsChanged(float v) {
-//
-//    }
-//
-//    @Override
-//    public void onBufferReceived(byte[] bytes) {
-//
-//    }
-//
-//    @Override
-//    public void onEndOfSpeech() {
-//
-//    }
-//
-//    /**
-//     Here's the log statements right before the ERROR_CLIENT is sent to onError
-//     // because the MainActivity was recreated // the SpeechRecognizer object was cleaned up
-//     Log.e(TAG, "no selected voice recognition service");
-//     Log.e(TAG, "bind to recognition service failed");
-//     Log.e(TAG, "startListening() failed", e);
-//     Log.e(TAG, "stopListening() failed", e);
-//     Log.e(TAG, "cancel() failed", e);
-//     Log.e(TAG, "not connected to the recognition service");
-//     */
-//
-//    @Override
-//    public void onError(int errorCode) {
-//        empty_variables();
-//        Speak speak=new Speak();
-//        String message;
-//        switch (errorCode) {
-//            case SpeechRecognizer.ERROR_AUDIO:
-//                message = "Audio recording error"; // fails to record
-//                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-//                Log.e("onError","RecognitioNListener error: "+message);
-//                remove_intent_after_delay();
-//                break;
-//            case SpeechRecognizer.ERROR_CLIENT:
-//                message = "other Client side error";
-//                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-//                Log.e("onError","RecognitioNListener error: "+message);
-//                remove_intent_after_delay();
-//                break;
-//            case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
-//                message = "Insufficient permissions";
-//                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-//                Log.e("onError","RecognitioNListener error: "+message);
-//                remove_intent_after_delay();
-//                break;
-//            case SpeechRecognizer.ERROR_NETWORK:
-//                message = "Network error";
-//                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-//                Log.e("onError","RecognitioNListener error: "+message);
-//                text_to_say="a network error occurred. please check your internet connection";
-//                speak.execute();
-//                break;
-//            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
-//                message = "Network timeout";
-//                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-//                Log.e("onError","RecognitioNListener error: "+message);
-//                process_intent_again(); //
-//                break;
-//            case SpeechRecognizer.ERROR_NO_MATCH:
-//                message = "No match";
-//                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-//                Log.e("onError","RecognitioNListener error: "+message);
-//                int speechStatus = textToSpeech.speak(" Didn't understand, please try again.", TextToSpeech.QUEUE_FLUSH, null, null);
-//                while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
-//                    Log.i("tts","text to speech");
-//                }
-//                check_record_audio_permission();
-//                break;
-//            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
-//                message = "RecognitionService busy";
-//                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-//                Log.e("onError","RecognitioNListener error: "+message);
-//                speechRecognizerIsBusy();
-//                break;
-//            case SpeechRecognizer.ERROR_SERVER:
-//                message = "error from server";
-//                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-//                Log.e("onError","RecognitioNListener error: "+message);
-//                process_intent_again(); //
-//                break;
-//            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
-//                message = "No speech input";  // no response
-//                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-//                Log.e("onError","RecognitioNListener error: "+message);
-//                text_to_say="okay, no response";
-//                speak.execute();
-//                break;
-//            default:
-//                message = "an error occurred, please try again.";
-//                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-//                Log.e("onError","RecognitioNListener error: "+message);
-//                int speechStatus2 = textToSpeech.speak(" an error occurred, please try again.", TextToSpeech.QUEUE_FLUSH, null, null);
-//                while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
-//                    Log.i("tts","text to speech");
-//                }
-//                check_record_audio_permission();
-//                break;
-//        }
-//    }
-//
-//    @Override
-//    public void onResults(Bundle results) {
-//        ArrayList result = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-//        String response=result.get(0).toString();
-//        String mode=sharedpreferences.getString("mode","");
-//        Handler handler=new Handler();
-//        if(packageName.equals(whatsapp_package_name)){
-//            if(isPhoneLocked()){
-//                if(mode.equals("sms_mode")){
-//                    sendSMSMessage(response); // send sms
-//                }else{
-//                    // either in chatting mode // or no mode // user has not yet activated any mode
-//                    //
-//                    SharedPreferences.Editor editor = sharedpreferences.edit();
-//                    pending_responses.add("send whatsapp message to "+title+"  "+response);  // add response to the set
-//                    editor.putStringSet("pending_responses",pending_responses);  // save the set
-//                    editor.apply();
-//                    //
-//                    text_to_say="your phone is locked, this message will be sent when you unlock it";
-//                    Speak speak=new Speak();
-//                    speak.execute();
-//                    //
-//                    // save the message in a set of strings inside shared preferences // when phone is unlocked it will send these messages
-//                }
-//            }else{
-//                if(mode.equals("sms_mode")){
-//                    sendSMSMessage(response); // send sms
-//                }else{
-//                    // either in chatting mode // or no mode // user has not yet activated any mode
-//                    send_message_on_whatsapp(response);// send directly to whatsapp
-//                }
-//            }
-//            //
-//        }else if(packageName.equals(sms_package_name)){
-//            sendSMSMessage(response); //
-//        }else if(packageName.equals(messenger)){
-//            // reply to messenger
-//            if(!isPhoneLocked()){
-//                sendToMessenger(response,messenger);
-//            }else{
-//                text_to_say="your phone is locked, please switch to chatting mode to enable notify to send your response on messenger";
-//                Speak speak=new Speak();
-//                speak.execute();
-//            }
-//            //
-//        }else if(packageName.equals(messenger_lite)){
-//            // reply to messenger lite
-//            if(!isPhoneLocked()){
-//                sendToMessenger(response,messenger_lite);
-//            }else{
-//                text_to_say="your phone is locked, please switch to chatting mode to enable notify to send your response to messenger lite";
-//                Speak speak=new Speak();
-//                speak.execute();
-//            }
-//            //
-//        }else{
-//            //proceed with next intent in the list
-//            empty_variables();
-//            try{
-//                list_of_notifications.remove(0);
-//                if(!list_of_notifications.isEmpty()){
-//                    process_notification(); // process the intent which is now on the position 0
-//                }else{
-//                    audioManager.abandonAudioFocus(audioFocusChangeListener);
-//                    notification_in_process=false; // after processing all intents inside the arraylist
-//                }
-//            }catch (IndexOutOfBoundsException ex){
-//                Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // onResults() of record audio else branch // not whatsapp ,not sms, not messenger");
-//            }
-//            //
-//        }
-//    }
-//
-//    @Override
-//    public void onPartialResults(Bundle bundle) {
-//
-//    }
-//
-//    @Override
-//    public void onEvent(int i, Bundle bundle) {
-//
-//    }
-    // ------ end -------
-
-    private void remove_intent(){
-        try{
-            list_of_notifications.remove(0);
-            if(!list_of_notifications.isEmpty()){
-                process_notification(); // process the intent which is now on the position 0
-            }else{
-                audioManager.abandonAudioFocus(audioFocusChangeListener);
-                notification_in_process=false; // after processing all intents inside the arraylist
-            }
-        }catch (IndexOutOfBoundsException ex){
-            Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // remove_intent() ");
-        }
-        //
     }
 
     //  For the LocalBroadcast
@@ -1440,12 +1212,6 @@ public class MainActivity extends AppCompatActivity{
     @Override
     protected void onPause() {
         super.onPause();
-//        if(mSpeechRecognizer!=null){
-//            mSpeechRecognizer.stopListening();
-//            mSpeechRecognizer.cancel();
-//            mSpeechRecognizer.destroy();
-//        }
-//        mSpeechRecognizer=null;
         unregisterReceiver(phoneUnlockedReceiver);
     }
 
@@ -1469,33 +1235,6 @@ public class MainActivity extends AppCompatActivity{
         }
     };
 
-    private void vibrate_phone(){
-        Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-        // Vibrate for 500 milliseconds
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
-            if(v != null){
-                v.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE));
-            }
-        }else{
-            //deprecated in API 26
-            if(v != null){
-                v.vibrate(500);
-            }
-        }
-    }
-
-    private void create_speech_recognizer(){
-//        mSpeechRecognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-//        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-//                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-//        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,
-//                getApplication().getPackageName());
-//        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-//        // create a recognizer
-//        mSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);  // this ---> context
-//        mSpeechRecognizer.setRecognitionListener(this); // this ---> RecognitionListener interface
-    }
-
     private void empty_variables(){
         packageName="";
         title="";
@@ -1507,19 +1246,10 @@ public class MainActivity extends AppCompatActivity{
     private void record_audio_denied(){
         if(checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED){
             // permission is already allowed but due to error that happened with the single instance of SpeechRecognizer when MainActivity was restarted // permission now becomes denied until the connection between mainActivity and SpeechRecognizer instance is established again // the system denies us permission
-            if(SpeechRecognizer.isRecognitionAvailable(this)){ // just try and see
-//                if(mSpeechRecognizer != null){
-//                    mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
-//                }else{
-//                    //Toast.makeText(this, "record_audio_denied //mSpeechRecognizer == null", Toast.LENGTH_LONG).show();
-//                    Log.e("record_audio_denied","mSpeechRecognizer == null //restart speech recognizer");
-//                    create_speech_recognizer();
-//                    mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
-//                }
-                // start service
+            if(SpeechRecognizer.isRecognitionAvailable(this)){
                 Intent recognitionService=  new Intent(this, RecognitionService.class);
+                recognitionService.putExtra("first_time_onStop_called",false);
                 startService(recognitionService);
-
             }else{
                 Toast.makeText(this, "you device does not support speech recognition", Toast.LENGTH_LONG).show();
                 remove_intent_after_delay();
@@ -1541,16 +1271,6 @@ public class MainActivity extends AppCompatActivity{
         }
     }
 
-    private void speechRecognizerIsBusy(){
-//        if(mSpeechRecognizer!=null){
-//            mSpeechRecognizer.stopListening();
-//            mSpeechRecognizer.cancel();
-//            mSpeechRecognizer.destroy();
-//        }
-//        mSpeechRecognizer=null;
-//        process_intent_again();
-    }
-
     private void restart_mainActivity(){
         Handler handler=new Handler();
         handler.postDelayed(new Runnable() {
@@ -1565,24 +1285,9 @@ public class MainActivity extends AppCompatActivity{
         //
     }
 
-
-    // issues start here
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-        //to disable back button // just remove  super.onBackPressed();
-//        Toast.makeText(this, "please use the home button to leave the app", Toast.LENGTH_LONG).show();
-//        vibrate_phone();
-//        return;
-    }
-
     @Override
     protected void onStop() {
         super.onStop();
-//        if(mSpeechRecognizer!=null){
-//            mSpeechRecognizer.destroy();
-//        }
-//        mSpeechRecognizer=null;
     }
 
     public BroadcastReceiver onFinishRecording= new BroadcastReceiver() {
@@ -1593,15 +1298,173 @@ public class MainActivity extends AppCompatActivity{
             if(handling_pending_responses){
                 return;
             }
-            Intent speakService=  new Intent(getApplicationContext(), RecognitionService.class);
-            stopService(speakService);
-            //
-            remove_intent_after_delay();
+            Intent recognitionService=  new Intent(getApplicationContext(), RecognitionService.class);
+            String output = recognitionService.getStringExtra("output");
+            if(output.equals("results")){
+                SpeechRecognitionResults(recognitionService.getStringExtra("response"));
+                stopService(recognitionService);
+            }else if(output.equals("error")){
+                SpeechRecognitionError(recognitionService.getIntExtra("errorCode",500)); // 500 --> default value
+                stopService(recognitionService);
+            }
         }
     };
 
-    // available 100%
-    // during onStop() of the first time app is used we use a boolean variable in shared preferences
-    // --> during onStart() now we check that variable // then just start the service RecognitionService
-    // --> we know that it will fail this time // so that when a new message comes // StartListening will work
+    private void SpeechRecognitionError(int errorCode) {
+        Speak speak=new Speak();
+        String message;
+        switch (errorCode) {
+            case SpeechRecognizer.ERROR_AUDIO:
+                empty_variables();
+                message = "Audio recording error";
+                Log.e("onError","RecognitionListener error: "+message);
+                text_to_say="an error occurred, Audio recording error";
+                speak.execute();
+                break;
+            case SpeechRecognizer.ERROR_CLIENT:
+                empty_variables();
+                message = "other Client side error";
+                Log.e("onError","RecognitionListener error: "+message);
+                text_to_say="an error occurred, Client side error";
+                speak.execute();
+                break;
+            case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
+                empty_variables();
+                message = "Insufficient permissions";
+                Log.e("onError","RecognitionListener error: "+message);
+                text_to_say="an error occurred, some permissions were not granted.";
+                speak.execute();
+                break;
+            case SpeechRecognizer.ERROR_NETWORK:
+                empty_variables();
+                message = "Network error";
+                Log.e("onError","RecognitionListener error: "+message);
+                text_to_say="a network error occurred. please check your internet connection";
+                speak.execute();
+                break;
+            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
+                empty_variables();
+                message = "Network timeout"; // network issues --> slow
+                Log.e("onError","RecognitionListener error: "+message);
+                process_intent_again();
+                break;
+            case SpeechRecognizer.ERROR_NO_MATCH:
+                message = "No match";
+                Log.e("onError","RecognitionListener error: "+message);
+                int speechStatus = textToSpeech.speak(" Didn't understand, please try again.", TextToSpeech.QUEUE_FLUSH, null, null);
+                while(textToSpeech.isSpeaking()){
+                    Log.i("tts","text to speech");
+                }
+                check_record_audio_permission();
+                break;
+            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
+                message = "RecognitionService busy";
+                Log.e("onError","RecognitionListener error: "+message);
+                int speechStatus2 = textToSpeech.speak(" An Error occurred, please try again.", TextToSpeech.QUEUE_FLUSH, null, null);
+                while(textToSpeech.isSpeaking()){
+                    Log.i("tts","text to speech");
+                }
+                check_record_audio_permission();
+                break;
+            case SpeechRecognizer.ERROR_SERVER:
+                empty_variables();
+                message = "error from server";
+                Log.e("onError","RecognitionListener error: "+message);
+                process_intent_again();
+                break;
+            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
+                empty_variables();
+                message = "No speech input";  // no response
+                Log.e("onError","RecognitionListener error: "+message);
+                text_to_say="okay, no response";
+                speak.execute();
+                break;
+            default:  // the default case inside onError() --> RecognitionService // errorCode -> 500 // will be also a default case here
+                empty_variables();
+                message = "an unexpected error occurred, please try again.";
+                Log.e("onError","RecognitionListener error: "+message);
+                text_to_say="an unexpected error occurred";
+                speak.execute();
+                break;
+        }
+    }
+
+    public void SpeechRecognitionResults(String response) {
+        String mode=sharedpreferences.getString("mode","");
+        if(packageName.equals(whatsapp_package_name)){
+            if(isPhoneLocked()){
+                if(mode.equals("sms_mode")){
+                    sendSMSMessage(response); // send sms
+                }else{
+                    // either in chatting mode // or no mode // user has not yet activated any mode
+                    SharedPreferences.Editor editor = sharedpreferences.edit();
+                    pending_responses.add("send whatsapp message to "+title+"  "+response);  // add response to the set
+                    editor.putStringSet("pending_responses",pending_responses);  // save the set
+                    editor.apply();
+                    //
+                    text_to_say="your phone is locked, this message will be sent when you unlock it";
+                    Speak speak=new Speak();
+                    speak.execute();
+                    // save the message in a set of strings inside shared preferences // when phone is unlocked it will send these messages
+                }
+            }else{
+                if(mode.equals("sms_mode")){
+                    sendSMSMessage(response); // send sms
+                }else{
+                    // either in chatting mode // or no mode // user has not yet activated any mode
+                    send_message_on_whatsapp(response);// send directly to whatsapp
+                }
+            }
+            //
+        }else if(packageName.equals(sms_package_name)){
+            sendSMSMessage(response); //
+        }else if(packageName.equals(messenger)){
+            // reply to messenger
+            if(!isPhoneLocked()){
+                sendToMessenger(response,messenger);
+            }else{
+                text_to_say="your phone is locked, please switch to chatting mode to enable notify to send your response on messenger";
+                Speak speak=new Speak();
+                speak.execute();
+            }
+            //
+        }else if(packageName.equals(messenger_lite)){
+            // reply to messenger lite
+            if(!isPhoneLocked()){
+                sendToMessenger(response,messenger_lite);
+            }else{
+                text_to_say="your phone is locked, please switch to chatting mode to enable notify to send your response to messenger lite";
+                Speak speak=new Speak();
+                speak.execute();
+            }
+            //
+        }else{
+            //proceed with next intent in the list
+            empty_variables();
+            try{
+                list_of_notifications.remove(0);
+                if(!list_of_notifications.isEmpty()){
+                    process_notification(); // process the intent which is now on the position 0
+                }else{
+                    audioManager.abandonAudioFocus(audioFocusChangeListener);
+                    notification_in_process=false; // after processing all intents inside the arraylist
+                }
+            }catch (IndexOutOfBoundsException ex){
+                Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // onResults() of record audio else branch // not whatsapp ,not sms, not messenger");
+            }
+            //
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        //
+        if(!first_time_onStop_called && !first_time_onStop_called2){
+            if(checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED){
+                first_time_onStop_called = true;
+            }
+        }
+        //
+    }
 }

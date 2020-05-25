@@ -4,14 +4,12 @@ package com.example.dell.notify;
  * Created by DELL on 12/27/2019.
  */
 
-import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -24,7 +22,6 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
-import java.io.ByteArrayOutputStream;
 import java.util.Locale;
 
 
@@ -70,22 +67,12 @@ public class NotificationService extends NotificationListenerService {
             // title or text is empty
             return;
         }
-        //
-        int id1 = extras.getInt(Notification.EXTRA_SMALL_ICON);
-        Bitmap id = sbn.getNotification().largeIcon;
 
         Intent msgrcv = new Intent("Msg"); // action --> "Msg"
         msgrcv.putExtra("package", packageName);
         msgrcv.putExtra("ticker", ticker);
         msgrcv.putExtra("title", title);
         msgrcv.putExtra("text", text);
-        //
-        if(id != null) {
-            ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            id.compress(Bitmap.CompressFormat.PNG, 100, stream);
-            byte[] byteArray = stream.toByteArray();
-            msgrcv.putExtra("icon",byteArray);
-        }
         //
         String sms_package_name=Telephony.Sms.getDefaultSmsPackage(context);
         if(packageName.equals("android") || packageName.equals("com.example.dell.notify") || packageName.equals(sms_package_name)){

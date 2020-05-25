@@ -9,7 +9,6 @@ import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -18,6 +17,7 @@ public class RecognitionService extends Service implements RecognitionListener{
 
     private SpeechRecognizer mSpeechRecognizer;
     private Intent mSpeechRecognizerIntent;
+    private static boolean first_time_onStop_called = false;
 
     public RecognitionService() {
     }
@@ -32,7 +32,7 @@ public class RecognitionService extends Service implements RecognitionListener{
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
+        first_time_onStop_called =intent.getBooleanExtra("first_time_onStop_called",false);
         if(mSpeechRecognizer != null){
             mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
         }else{
@@ -81,81 +81,52 @@ public class RecognitionService extends Service implements RecognitionListener{
 
     @Override
     public void onError(int errorCode) {
-        String message;
         switch (errorCode) {
             case SpeechRecognizer.ERROR_AUDIO:
-                message = "Audio recording error"; // fails to record
-                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-                Log.e("onError","RecognitioNListener error: "+message);
-                sendBroadcast();
+                errorOcurredSendBroadcast(SpeechRecognizer.ERROR_AUDIO);
                 break;
             case SpeechRecognizer.ERROR_CLIENT:
-                message = "other Client side error";
-                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-                Log.e("onError","RecognitioNListener error: "+message);
-                sendBroadcast();
+                errorOcurredSendBroadcast(SpeechRecognizer.ERROR_CLIENT);
                 break;
             case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
-                message = "Insufficient permissions";
-                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-                Log.e("onError","RecognitioNListener error: "+message);
-                sendBroadcast();
+                errorOcurredSendBroadcast(SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS);
                 break;
             case SpeechRecognizer.ERROR_NETWORK:
-                message = "Network error";
-                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-                Log.e("onError","RecognitioNListener error: "+message);
-                sendBroadcast();
+                errorOcurredSendBroadcast(SpeechRecognizer.ERROR_NETWORK);
                 break;
             case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
-                message = "Network timeout";
-                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-                Log.e("onError","RecognitioNListener error: "+message);
-                sendBroadcast(); //
+                errorOcurredSendBroadcast(SpeechRecognizer.ERROR_NETWORK_TIMEOUT);
                 break;
             case SpeechRecognizer.ERROR_NO_MATCH:
-                message = "No match";
-                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-                Log.e("onError","RecognitioNListener error: "+message);
-                sendBroadcast();
+                errorOcurredSendBroadcast(SpeechRecognizer.ERROR_NO_MATCH);
                 break;
             case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
-                message = "RecognitionService busy";
-                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-                Log.e("onError","RecognitioNListener error: "+message);
-                mSpeechRecognizer.cancel();
-                mSpeechRecognizer.destroy();
-                mSpeechRecognizer=null;
-                sendBroadcast();
+                speechRecognizerIsBusy();
+                errorOcurredSendBroadcast(SpeechRecognizer.ERROR_RECOGNIZER_BUSY);
                 break;
             case SpeechRecognizer.ERROR_SERVER:
-                message = "error from server";
-                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-                Log.e("onError","RecognitioNListener error: "+message);
-                sendBroadcast(); //
+                errorOcurredSendBroadcast(SpeechRecognizer.ERROR_SERVER);
                 break;
             case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
-                message = "No speech input";  // no response
-                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-                Log.e("onError","RecognitioNListener error: "+message);
-                sendBroadcast();
+                errorOcurredSendBroadcast(SpeechRecognizer.ERROR_SPEECH_TIMEOUT);
                 break;
             default:
-                message = "an error occurred, please try again.";
-                //Toast.makeText(this, "RecognitioNListener error: "+message, Toast.LENGTH_SHORT).show();
-                Log.e("onError","RecognitioNListener error: "+message);
-                sendBroadcast();
+                errorOcurredSendBroadcast(500); // we just use 500 --> as default error code
                 break;
         }
     }
 
     @Override
     public void onResults(Bundle results) {
+        if(first_time_onStop_called){
+            return;
+        }
         ArrayList result = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
         String response=result.get(0).toString();
-        Toast.makeText(RecognitionService.this, "RESPONSE: "+response, Toast.LENGTH_SHORT).show();
         // send broadcast
         Intent FinishRecording = new Intent("Recording"); // action --> "Recording"
+        FinishRecording.putExtra("output", "results");
+        FinishRecording.putExtra("response", response);
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(FinishRecording);
     }
 
@@ -193,9 +164,22 @@ public class RecognitionService extends Service implements RecognitionListener{
         mSpeechRecognizer.setRecognitionListener(this); // this ---> RecognitionListener interface
     }
 
-    private void sendBroadcast(){
-        Intent FinishRecording = new Intent("Recording"); // action --> "Recording"
-        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(FinishRecording);
+    private void speechRecognizerIsBusy(){
+        if(mSpeechRecognizer!=null){
+            mSpeechRecognizer.cancel();
+            mSpeechRecognizer.destroy();
+        }
+        mSpeechRecognizer=null;
+    }
+
+    private void errorOcurredSendBroadcast(int errorCode){
+        if(first_time_onStop_called){
+            return;
+        }
+        Intent intent = new Intent("Recording"); // action --> "Recording"
+        intent.putExtra("output", "error");
+        intent.putExtra("errorCode",errorCode);
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 
 }
