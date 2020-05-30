@@ -91,12 +91,9 @@ public class SpeakTextService extends Service {
                 title=intent.getStringExtra("title");
             }
             Handler handler=new Handler();
-            handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    Speak speak=new Speak();
-                    speak.execute();
-                }
+            handler.postDelayed(() -> {
+                Speak speak=new Speak();
+                speak.execute();
             },5000); // wait a bit so that Text to Speech finish initialization
         }
         //
