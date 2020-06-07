@@ -20,4 +20,20 @@
     <string name="your_personal_chat_assistant">Your personal chat Assistant</string>
     <string name="home">home</string>
     <string name="change_mode">Change mode</string>
+    <string name="next">Next</string>
+    <string name="reads_aloud_your_messages_and_notifications_from">Reads aloud your messages and notifications from</string>
+    <string name="reply_with_voice">Reply with voice</string>
+    <string name="reply_with_voice2">Helps you reply with voice.</string>
+    <string name="previous">Previous</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="notify">Notify</string>
+    <string name="different_modes_are_available_default_mode_chatting_mode_and_sms_mode">Different modes are available: Default mode, Chatting mode and SMS mode.</string>
+    <string name="a_spam_classifier_to_filter_notifications_from_various_websites_and_applications">A spam classifier to filter notifications from various websites and applications</string>
+    <string name="sign_in">Sign in</string>
+    <string name="sign_up">Sign up</string>
+    <string name="requires_permission_to_access_your_contacts_to_use_microphone_to_send_sms_and_permission_to_write_settings">Requires permission to access your contacts, to use microphone, to send SMS and permission to write settings.</string>
+    <string name="grant_permissions">Grant Permissions</string>
+    <string name="permissions_granted">Permissions Granted</string>
 </resources>

@@ -27,13 +27,13 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name=".MainActivity"
+            android:name=".activities.MainActivity"
             android:launchMode="singleTask"
             android:persistent="true"
             android:screenOrientation="portrait"
             android:theme="@style/MainActivityTheme" />
         <activity
-            android:name=".SplashScreen"
+            android:name=".activities.SplashScreen"
             android:theme="@style/SplashScreenTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -41,10 +41,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".ShowFragments" />
+        <activity android:name=".activities.ShowFragments"
+            android:screenOrientation="portrait"
+            android:theme="@style/FragmentsTheme"/>
 
         <service
-            android:name=".NotificationService"
+            android:name=".services.NotificationService"
             android:label="@string/app_name"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
@@ -52,31 +54,31 @@
             </intent-filter>
         </service>
         <service
-            android:name=".MyService"
+            android:name=".services.MyService"
             android:enabled="true"
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
         <service
-            android:name=".TryService"
+            android:name=".services.TryService"
             android:enabled="true"
             android:exported="true" />
         <service
-            android:name=".ServiceWithAlarmManager"
+            android:name=".services.ServiceWithAlarmManager"
             android:enabled="true"
             android:exported="true" />
         <service
-            android:name=".SpeakTextService"
+            android:name=".services.SpeakTextService"
             android:enabled="true"
             android:exported="true" />
 
-        <receiver android:name=".SMSReceived">
+        <receiver android:name=".broadcast_receivers.SMSReceived">
             <intent-filter>
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
 
         <service
-            android:name=".RecognitionService"
+            android:name=".services.RecognitionService"
             android:enabled="true"
             android:exported="true"></service>
     </application>

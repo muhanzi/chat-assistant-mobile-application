@@ -4,4 +4,5 @@
     <color name="colorPrimaryDark">#15D671</color>
     <color name="colorAccent">#15D671</color>
     <color name="projectColorCode">#15D671</color>
+    <color name="ThinWhite">#efecec</color>
 </resources>
