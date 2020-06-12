@@ -29,15 +29,19 @@
         <activity
             android:name=".activities.MainActivity"
             android:launchMode="singleTask"
+            android:finishOnTaskLaunch="true"
             android:persistent="true"
             android:screenOrientation="portrait"
-            android:theme="@style/MainActivityTheme" />
+            android:theme="@style/MainActivityTheme" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".activities.SplashScreen"
             android:theme="@style/SplashScreenTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

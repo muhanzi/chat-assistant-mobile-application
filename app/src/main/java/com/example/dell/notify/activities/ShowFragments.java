@@ -1,6 +1,7 @@
 package com.example.dell.notify.activities;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.provider.Settings;
 import android.support.constraint.ConstraintLayout;
@@ -15,6 +16,7 @@ import android.widget.Toast;
 import com.example.dell.notify.R;
 import com.example.dell.notify.fragments.MyFragmentsAdapter;
 import com.example.dell.notify.fragments.Page3;
+import com.google.firebase.auth.FirebaseUser;
 
 public class ShowFragments extends AppCompatActivity {
 
@@ -93,6 +95,16 @@ public class ShowFragments extends AppCompatActivity {
         grant_permissions.setEnabled(false);
         grant_permissions.setText(R.string.permissions_granted);
         grant_permissions.setBackground(ContextCompat.getDrawable(this,R.drawable.permissions_granted_button));
+    }
+
+    public void startMainActivity(FirebaseUser user){
+        // when user is logged in
+        Intent mainActivity = new Intent(this, MainActivity.class);
+        mainActivity.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        mainActivity.putExtra("email",user.getDisplayName());
+        mainActivity.putExtra("userID",user.getUid());
+        startActivity(mainActivity);
+        finish();
     }
 
 }

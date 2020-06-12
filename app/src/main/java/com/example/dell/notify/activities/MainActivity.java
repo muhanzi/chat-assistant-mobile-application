@@ -89,7 +89,6 @@ public class MainActivity extends AppCompatActivity{
         }
     };
     //
-    public static boolean notification_in_process=false;
     private ArrayList<Intent> list_of_notifications =new ArrayList<>();
     //
     private String packageName="",title=""; // packageName--> name of the app from which comes the notification and title --> is the sender of the notification
@@ -294,12 +293,12 @@ public class MainActivity extends AppCompatActivity{
         // Turn Notify off
         SharedPreferences.Editor editor = sharedpreferences.edit();
         editor.putBoolean("turn_on_notify",false);
+        editor.putBoolean("notification_in_process",false); // processing is stopped
         editor.apply();  // will save it in the background
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         button_start_now.setText(R.string.start_now);
         button_start_now.setEnabled(true);
         //
-        notification_in_process=false;// processing is stopped
     }
 
     @Override
@@ -389,6 +388,9 @@ public class MainActivity extends AppCompatActivity{
                     cursor = getApplicationContext().getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null, null, null, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC");
                 }
                 //
+                SharedPreferences.Editor editor = sharedpreferences.edit();
+                editor.putBoolean("notification_in_process",false);
+                editor.apply(); // after clearing the list of intents // to allow next incoming intent to process
                 button_start_now.setText(R.string.notify_is_running);
                 button_start_now.setEnabled(false);
             }else{
@@ -462,7 +464,9 @@ public class MainActivity extends AppCompatActivity{
                             process_notification(); // process the intent which is now on the position 0
                         }else{
                             audioManager.abandonAudioFocus(audioFocusChangeListener);
-                            notification_in_process=false; // after processing all intents inside the arraylist
+                            SharedPreferences.Editor editor = sharedpreferences.edit();
+                            editor.putBoolean("notification_in_process",false);
+                            editor.apply(); // after processing all intents inside the arraylist
                         }
                     }catch (IndexOutOfBoundsException ex){
                         Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist //sendSMSText ");
@@ -508,7 +512,9 @@ public class MainActivity extends AppCompatActivity{
                             process_notification(); // process the intent which is now on the position 0
                         }else{
                             audioManager.abandonAudioFocus(audioFocusChangeListener);
-                            notification_in_process=false; // after processing all intents inside the arraylist
+                            SharedPreferences.Editor editor = sharedpreferences.edit();
+                            editor.putBoolean("notification_in_process",false);
+                            editor.apply(); // after processing all intents inside the arraylist
                         }
                     }catch (IndexOutOfBoundsException ex){
                         Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // MY_PERMISSIONS_REQUEST_SEND_SMS ");
@@ -562,12 +568,12 @@ public class MainActivity extends AppCompatActivity{
                             process_notification(); // process the intent which is now on the position 0
                         }else{
                             audioManager.abandonAudioFocus(audioFocusChangeListener);
-                            notification_in_process=false; // after processing all intents inside the arraylist
+                            SharedPreferences.Editor editor = sharedpreferences.edit();
+                            editor.putBoolean("notification_in_process",false);
+                            editor.apply(); // after processing all intents inside the arraylist
                         }
                     }catch (IndexOutOfBoundsException ex){
                         Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // REQ_CODE_FOR_ACCESS_CONTACTS");
-                        audioManager.abandonAudioFocus(audioFocusChangeListener);
-                        notification_in_process=false;
                     }
                     //
                 }
@@ -627,6 +633,8 @@ public class MainActivity extends AppCompatActivity{
         final Intent intent=new Intent(Intent.ACTION_VOICE_COMMAND);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
+        //
+        /*
         final Handler handler=new Handler();
         handler.postDelayed(new Runnable(){
             @Override
@@ -649,7 +657,9 @@ public class MainActivity extends AppCompatActivity{
                                 process_notification(); // process the intent which is now on the position 0
                             }else{
                                 audioManager.abandonAudioFocus(audioFocusChangeListener);
-                                notification_in_process=false; // after processing all intents inside the arraylist
+                                SharedPreferences.Editor editor = sharedpreferences.edit();
+                                editor.putBoolean("notification_in_process",false);
+                                editor.apply(); // after processing all intents inside the arraylist
                             }
                         }catch (IndexOutOfBoundsException ex){
                             Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // send_message_on_whatsapp() main activity");
@@ -658,6 +668,13 @@ public class MainActivity extends AppCompatActivity{
                 },80000); // give google assistant 80 seconds to process
             }
         },3000); // 3 secs// just wait for google assistant to get ready
+        */
+        // start service
+        Intent speakService=  new Intent(this, SpeakTextService.class);
+        speakService.putExtra("textToSay","send whatsapp message to "+title+"  "+text);
+        speakService.putExtra("type","send_whatsapp_message");
+        startService(speakService);
+        //
     }
 
     @Override
@@ -675,6 +692,7 @@ public class MainActivity extends AppCompatActivity{
         @Override
         public void onReceive(Context context, Intent intent) {
             boolean turn_on_notify=sharedpreferences.getBoolean("turn_on_notify",true);
+            boolean notification_in_process=sharedpreferences.getBoolean("notification_in_process",true);
             if(turn_on_notify){  // proceed only if turn_on_notify==true
                 list_of_notifications.add(intent);
                 if(!notification_in_process){
@@ -693,7 +711,9 @@ public class MainActivity extends AppCompatActivity{
 
         if(request_audio_focus()) {
             empty_variables();  //    --->  contact_name = "";  // the contact name must be fetched every time we process message //intent
-            notification_in_process = true; // Notification in process
+            SharedPreferences.Editor editor = sharedpreferences.edit();
+            editor.putBoolean("notification_in_process",true);
+            editor.commit(); // Notification in process
             //
             try{
                 Intent intent = list_of_notifications.get(0);
@@ -723,7 +743,9 @@ public class MainActivity extends AppCompatActivity{
             }
         }else{
             // audio focus can be denied // for example during phone call
-            notification_in_process=false;    // this intent will be processed again when a new intent arrives  // works fine
+            SharedPreferences.Editor editor = sharedpreferences.edit();
+            editor.putBoolean("notification_in_process",false);
+            editor.apply(); // this intent will be processed again when a new intent arrives  // works fine
             //keep the intent in the arrayList
             Log.e("AudioFocus","Audio focus permission is denied");
             Toast.makeText(this, "Audio focus permission is denied", Toast.LENGTH_SHORT).show();
@@ -739,10 +761,22 @@ public class MainActivity extends AppCompatActivity{
             if(handling_pending_responses){
                 return;
             }
-            notification_in_process=true; // but no need for it here
             contact_name=""; // but no need for it here
             Intent speakService=  new Intent(getApplicationContext(), SpeakTextService.class);
             stopService(speakService); // does not cause crashing
+            //
+            String type=intent.getStringExtra("type");
+            switch (type) {
+                case "reply":
+                    check_record_audio_permission();
+                    return;
+                case "send_whatsapp_message":
+                    sendingMessageOnWhatsapp();
+                    return;
+                case "phone_locked":
+                    remove_intent_after_delay();
+                    return;
+            }
             //
             if(textToSpeech == null) {  // I'm doing this because the user may kill "--> onDestroy()"  the mainactivity which initializes the testToSpeech inside the onCreate  // so when our service sends the localBroadcast TextToSpeech will be available
                 textToSpeech = initializeTextToSpeech();
@@ -754,6 +788,33 @@ public class MainActivity extends AppCompatActivity{
             }
         }
     };
+
+    private void sendingMessageOnWhatsapp(){
+        empty_variables();
+        Handler handler=new Handler();
+        handler.postDelayed(new Runnable(){
+            @Override
+            public void run(){
+                // bring MainActivity to the foreground // so that notification service stays alive
+                bring_main_activity_to_foreground();
+                //
+                try{
+                    textToSpeech.stop();
+                    list_of_notifications.remove(0);
+                    if(!list_of_notifications.isEmpty()){
+                        process_notification(); // process the intent which is now on the position 0
+                    }else{
+                        audioManager.abandonAudioFocus(audioFocusChangeListener);
+                        SharedPreferences.Editor editor = sharedpreferences.edit();
+                        editor.putBoolean("notification_in_process",false);
+                        editor.apply(); // after processing all intents inside the arraylist
+                    }
+                }catch (IndexOutOfBoundsException ex){
+                    Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // send_message_on_whatsapp() main activity");
+                }
+            }
+        },80000); // give google assistant 80 seconds to process
+    }
 
     private void continue_process_notification(){
         String packageName="";
@@ -769,16 +830,12 @@ public class MainActivity extends AppCompatActivity{
             try {
                 sms_to_phone_number=list_of_notifications.get(0).getStringExtra("number");
                 if(isValidPhoneNumber()){
-                    int speechStatus = textToSpeech.speak(" if you would like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
-                    while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
-                        Log.i("tts","text to speech // SMS Message");
-                    }
-                    if(!textToSpeech.isSpeaking()) {
-                        check_record_audio_permission();
-                    }else{
-                        textToSpeech.stop();
-                        check_record_audio_permission();
-                    }
+                    //
+                    Intent speakService=  new Intent(this, SpeakTextService.class);
+                    speakService.putExtra("textToSay"," if you would like to reply, please say your message:");
+                    speakService.putExtra("type","reply");
+                    startService(speakService);
+                    //
                 }else{
                     remove_intent_after_delay();
                 }
@@ -786,18 +843,12 @@ public class MainActivity extends AppCompatActivity{
                 Log.i("Exception","IndexOutOfBoundsException // continue_process_notification // packageName --> sms");
             }
         }else if(packageName.equals(messenger) || packageName.equals(messenger_lite)){
-            int speechStatus = textToSpeech.speak(" if you would like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
-            while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
-                Log.i("tts","text to speech");
-            }
-            if(!textToSpeech.isSpeaking()) {
-                check_record_audio_permission();
-
-            }else{
-                textToSpeech.stop();
-                check_record_audio_permission();
-
-            }
+            //
+            Intent speakService=  new Intent(this, SpeakTextService.class);
+            speakService.putExtra("textToSay"," if you would like to reply, please say your message:");
+            speakService.putExtra("type","reply");
+            startService(speakService);
+            //
         }else{
             // package name does not require any response // we don't provide response for other apps like browsers,...
             empty_variables();
@@ -811,7 +862,9 @@ public class MainActivity extends AppCompatActivity{
                             process_notification(); // process the intent which is now on the position 0
                         }else{
                             audioManager.abandonAudioFocus(audioFocusChangeListener);
-                            notification_in_process=false; // after processing all intents inside the arraylist
+                            SharedPreferences.Editor editor = sharedpreferences.edit();
+                            editor.putBoolean("notification_in_process",false);
+                            editor.apply(); // after processing all intents inside the arraylist
                         }
                     }catch (IndexOutOfBoundsException ex){
                         Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // continue_processing() // package name does not require any response");
@@ -998,7 +1051,12 @@ public class MainActivity extends AppCompatActivity{
             //
             if(!contact_name.equals("")){ // means the title was found in our contacts
                 if(isValidPhoneNumber()){
-                    start_recording();
+                    //
+                    Intent speakService=  new Intent(MainActivity.this, SpeakTextService.class);
+                    speakService.putExtra("textToSay"," if you would like to reply, please say your message:");
+                    speakService.putExtra("type","reply");
+                    startService(speakService);
+                    //
                 }else{
                     // phone number is invalid so we just continue with next intent
                     // or number is saved in the contacts but is it not a valid phone number
@@ -1016,18 +1074,6 @@ public class MainActivity extends AppCompatActivity{
         }
     }
 
-    private void start_recording(){
-        int speechStatus = textToSpeech.speak(" if you would like to reply, please say your message:", TextToSpeech.QUEUE_FLUSH, null, null);
-        while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
-            Log.i("tts","text to speech // whatsapp // if you would...");
-        }
-        if(!textToSpeech.isSpeaking()) {
-            check_record_audio_permission();
-        }else{
-            textToSpeech.stop();
-            check_record_audio_permission();
-        }
-    }
     //
 
     private boolean isValidPhoneNumber(){
@@ -1057,7 +1103,9 @@ public class MainActivity extends AppCompatActivity{
                         process_notification(); // process the intent which is now on the position 0
                     }else{
                         audioManager.abandonAudioFocus(audioFocusChangeListener);
-                        notification_in_process=false; // after processing all intents inside the arraylist
+                        SharedPreferences.Editor editor = sharedpreferences.edit();
+                        editor.putBoolean("notification_in_process",false);
+                        editor.apply(); // after processing all intents inside the arraylist
                     }
                 }catch (IndexOutOfBoundsException ex){
                     Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // remove_intent_after_delay() ");
@@ -1097,54 +1145,6 @@ public class MainActivity extends AppCompatActivity{
         return characters_are_equal;
     }
 
-    // ========
-    private void speak(){
-        Handler handler=new Handler();
-        int speechStatus = textToSpeech.speak(text_to_say, TextToSpeech.QUEUE_FLUSH, null, null);
-        //
-        while(textToSpeech.isSpeaking()){
-            Log.i("tts","text to speech //doInBackground() --> Speak");
-        }
-        //
-        //
-        if(!textToSpeech.isSpeaking()) {
-            handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    try{
-                        list_of_notifications.remove(0);
-                        if(!list_of_notifications.isEmpty()){
-                            process_notification(); // process the intent which is now on the position 0
-                        }else{
-                            audioManager.abandonAudioFocus(audioFocusChangeListener);
-                            notification_in_process=false; // after processing all intents inside the arraylist
-                        }
-                    }catch (IndexOutOfBoundsException ex){
-                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // Speak async class // if(!textToSpeech.isSpeaking())");
-                    }
-                }
-            },5000);
-        }else{
-            textToSpeech.stop();
-            handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    try{
-                        list_of_notifications.remove(0);
-                        if(!list_of_notifications.isEmpty()){
-                            process_notification(); // process the intent which is now on the position 0
-                        }else{
-                            audioManager.abandonAudioFocus(audioFocusChangeListener);
-                            notification_in_process=false; // after processing all intents inside the arraylist
-                        }
-                    }catch (IndexOutOfBoundsException ex){
-                        Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // Speak async class // if(textToSpeech.isSpeaking())");
-                    }
-                }
-            },5000);
-        }
-    }
-
     private boolean isPhoneLocked(){
         return keyguardManager.isDeviceLocked() || keyguardManager.isKeyguardLocked() || keyguardManager.inKeyguardRestrictedInputMode();
     }
@@ -1168,7 +1168,9 @@ public class MainActivity extends AppCompatActivity{
                     process_notification(); // process the intent which is now on the position 0
                 }else{
                     audioManager.abandonAudioFocus(audioFocusChangeListener);
-                    notification_in_process=false; // after processing all intents inside the arraylist
+                    SharedPreferences.Editor editor = sharedpreferences.edit();
+                    editor.putBoolean("notification_in_process",false);
+                    editor.apply(); // after processing all intents inside the arraylist
                 }
             }catch (IndexOutOfBoundsException ex){
                 Log.e("Exception","IndexOutOfBoundsException error occurred // sendToMessenger()");
@@ -1203,9 +1205,11 @@ public class MainActivity extends AppCompatActivity{
         @Override
         public void onReceive(Context context, Intent intent) {
             if(list_of_notifications.isEmpty()){
-                notification_in_process=false;
+                SharedPreferences.Editor editor = sharedpreferences.edit();
+                editor.putBoolean("notification_in_process",false);
+                editor.apply();
             }else{
-                process_notification(); // after handling pending responses // now process the intnet that just arrived in that time of handling pending responses
+                process_notification(); // after handling pending responses // now process the intent that just arrived in that time of handling pending responses
             }
         }
     };
@@ -1279,7 +1283,6 @@ public class MainActivity extends AppCompatActivity{
             if(handling_pending_responses){
                 return;
             }
-            notification_in_process=true;
             Intent recognitionService=  new Intent(getApplicationContext(), RecognitionService.class);
             String output = intent.getStringExtra("output");
             if(output.equals("results")){
@@ -1335,7 +1338,9 @@ public class MainActivity extends AppCompatActivity{
                             process_notification(); // process the intent which is now on the position 0
                         }else{
                             audioManager.abandonAudioFocus(audioFocusChangeListener);
-                            notification_in_process=false; // after processing all intents inside the arraylist
+                            SharedPreferences.Editor editor = sharedpreferences.edit();
+                            editor.putBoolean("notification_in_process",false);
+                            editor.apply(); // after processing all intents inside the arraylist
                         }
                     }catch (IndexOutOfBoundsException ex){
                         Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // SpeechRecognizer.ERROR_SPEECH_TIMEOUT ");
@@ -1363,8 +1368,10 @@ public class MainActivity extends AppCompatActivity{
                     editor.putStringSet("pending_responses",pending_responses);  // save the set
                     editor.apply();
                     //
-                    text_to_say="your phone is locked, this message will be sent when you unlock it";
-                    speak();
+                    Intent speakService=  new Intent(this, SpeakTextService.class);
+                    speakService.putExtra("textToSay","your phone is locked, this message will be sent when you unlock it");
+                    speakService.putExtra("type","phone_locked");
+                    startService(speakService);
                     // save the message in a set of strings inside shared preferences // when phone is unlocked it will send these messages
                 }
             }else{
@@ -1383,8 +1390,10 @@ public class MainActivity extends AppCompatActivity{
             if(!isPhoneLocked()){
                 sendToMessenger(response,messenger);
             }else{
-                text_to_say="your phone is locked, please switch to chatting mode to enable notify to send your response on messenger";
-                speak();
+                Intent speakService=  new Intent(this, SpeakTextService.class);
+                speakService.putExtra("textToSay","your phone is locked, please switch to chatting mode to enable notify to send your response on messenger");
+                speakService.putExtra("type","phone_locked");
+                startService(speakService);
             }
             //
         }else if(packageName.equals(messenger_lite)){
@@ -1392,8 +1401,10 @@ public class MainActivity extends AppCompatActivity{
             if(!isPhoneLocked()){
                 sendToMessenger(response,messenger_lite);
             }else{
-                text_to_say="your phone is locked, please switch to chatting mode to enable notify to send your response to messenger lite";
-                speak();
+                Intent speakService=  new Intent(this, SpeakTextService.class);
+                speakService.putExtra("textToSay","your phone is locked, please switch to chatting mode to enable notify to send your response on messenger lite");
+                speakService.putExtra("type","phone_locked");
+                startService(speakService);
             }
             //
         }else{
@@ -1405,7 +1416,9 @@ public class MainActivity extends AppCompatActivity{
                     process_notification(); // process the intent which is now on the position 0
                 }else{
                     audioManager.abandonAudioFocus(audioFocusChangeListener);
-                    notification_in_process=false; // after processing all intents inside the arraylist
+                    SharedPreferences.Editor editor = sharedpreferences.edit();
+                    editor.putBoolean("notification_in_process",false);
+                    editor.apply(); // after processing all intents inside the arraylist
                 }
             }catch (IndexOutOfBoundsException ex){
                 empty_variables();

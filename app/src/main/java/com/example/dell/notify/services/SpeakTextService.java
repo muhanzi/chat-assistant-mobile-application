@@ -171,13 +171,23 @@ public class SpeakTextService extends Service {
             if(!handling_pending_responses){
                 if(!textToSay.equals("")){
                     textToSay="";
+                    //
+                    if(type.equals("reply") || type.equals("send_whatsapp_message") || type.equals("phone_locked")){
+                        Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
+                        FinishSpeaking.putExtra("type",type);
+                        LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
+                        return;
+                    }
+                    // for messages and notifications
                     if(type.equals("message") || packageName.equals(gmail) || packageName.equals(instagram) || packageName.equals(twitter) || packageName.equals(systemUI)){
+                        Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
+                        FinishSpeaking.putExtra("type",type);
+                        LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
+                        // empty variables
                         type="";
                         packageName="";
                         notification="";
                         title="";
-                        Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
-                        LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
                     }else{
                         filter_notification(notification);
                     }
@@ -209,12 +219,14 @@ public class SpeakTextService extends Service {
                                 // we display spams in ListView  // and save it in Firestore when we integrate it
                                 // report the spam // packageName,text,title,current date & time
                                 Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
+                                FinishSpeaking.putExtra("type",type);
                                 LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
                                 Log.i("SpamFilter","notification looks like a spam: "+notification_text+" Spam from: "+packageName);
                                 Toast.makeText(context, "notification looks like a spam: "+notification_text+" Spam from: "+packageName, Toast.LENGTH_SHORT).show();
                             }else{
                                 // it's a ham
                                 Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
+                                FinishSpeaking.putExtra("type",type);
                                 LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
                                 Log.i("SpamFilter","Ham: "+notification_text);
                             }
@@ -231,6 +243,7 @@ public class SpeakTextService extends Service {
                     public void onErrorResponse(VolleyError error) {
                         // error occurred // network, bad request,....
                         Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
+                        FinishSpeaking.putExtra("type",type);
                         LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
                         Log.i("SpamFilter","onErrorResponse: "+error.getMessage());
                        // Toast.makeText(context, "SpamFilter onErrorResponse() "+error.getMessage(), Toast.LENGTH_SHORT).show();

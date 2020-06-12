@@ -36,4 +36,11 @@
     <string name="requires_permission_to_access_your_contacts_to_use_microphone_to_send_sms_and_permission_to_write_settings">Requires permission to access your contacts, to use microphone, to send SMS and permission to write settings.</string>
     <string name="grant_permissions">Grant Permissions</string>
     <string name="permissions_granted">Permissions Granted</string>
+    <string name="password">Password</string>
+    <string name="email_address">Email address</string>
+    <string name="sign_in_using_facebook">Sign in using Facebook</string>
+    <string name="sign_up_using_facebook">Sign up using Facebook</string>
+    <string name="don_t_have_account_sign_up_here">Don\'t have account? sign up here</string>
+    <string name="already_have_an_account_sign_in_here">Already have an account? sign in here</string>
+    <string name="name">Name</string>
 </resources>
