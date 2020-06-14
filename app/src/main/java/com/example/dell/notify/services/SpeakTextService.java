@@ -173,6 +173,9 @@ public class SpeakTextService extends Service {
                     textToSay="";
                     //
                     if(type.equals("reply") || type.equals("send_whatsapp_message") || type.equals("phone_locked")){
+                        if(textToSpeech.isSpeaking()){
+                            textToSpeech.stop();
+                        }
                         Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
                         FinishSpeaking.putExtra("type",type);
                         LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
