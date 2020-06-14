@@ -2,9 +2,7 @@ package com.example.dell.notify.activities;
 
 import android.Manifest;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.TabLayout;
@@ -27,7 +25,6 @@ public class ShowFragments extends AppCompatActivity {
     private TabLayout tabLayout;
     public static ShowFragments instance;
     private final int REQ_CODE_PERMISSIONS_FOR_SMS_AUDIO_CONTACTS = 212;
-    private SharedPreferences sharedpreferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,7 +37,6 @@ public class ShowFragments extends AppCompatActivity {
         tabLayout.setupWithViewPager(mypager, true);
         adapter=new MyFragmentsAdapter(getSupportFragmentManager());
         mypager.setAdapter(adapter);
-        sharedpreferences = PreferenceManager.getDefaultSharedPreferences(this);
         mypager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
             public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
@@ -51,11 +47,9 @@ public class ShowFragments extends AppCompatActivity {
             public void onPageSelected(int position) {
                 ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) tabLayout.getLayoutParams();
                 if(position == 2){
-                   //tabLayout.setVisibility(View.INVISIBLE);
                    params.verticalBias = 0.9f;
                    tabLayout.setLayoutParams(params);
                }else{
-                   //tabLayout.setVisibility(View.VISIBLE);
                     params.verticalBias = 1.0f;
                     tabLayout.setLayoutParams(params);
                }
@@ -103,33 +97,7 @@ public class ShowFragments extends AppCompatActivity {
 
     public void startMainActivity(FirebaseUser user){
         // when user is logged in
-//        boolean mainActivityIsActive=sharedpreferences.getBoolean("MainActivityIsActive",true);
-//        boolean firstStartOfMainActivity=sharedpreferences.getBoolean("firstStartOfMainActivity",true);
-//        if(!mainActivityIsActive){
-//            // means the MainActivity has been destroyed
-//            Intent mainActivity = new Intent(this, MainActivity.class);
-//            //mainActivity.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-//            mainActivity.putExtra("email",user.getDisplayName());
-//            mainActivity.putExtra("userID",user.getUid());
-//            startActivity(mainActivity);
-//            finish();
-//        }else if(firstStartOfMainActivity){
-//            Intent mainActivity = new Intent(this, MainActivity.class);
-//            mainActivity.putExtra("email",user.getDisplayName());
-//            mainActivity.putExtra("userID",user.getUid());
-//            startActivity(mainActivity);
-//            SharedPreferences.Editor editor = sharedpreferences.edit();
-//            editor.putBoolean("firstStartOfMainActivity",false);
-//            editor.apply();
-//            finish();
-//        }
-//        else{
-//            MainActivity mainActivity = MainActivity.instance;
-//            mainActivity.bring_main_activity_to_foreground();
-//        }
-        //
         Intent mainActivity = new Intent(this, MainActivity.class);
-        //mainActivity.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK); //
         mainActivity.putExtra("email",user.getDisplayName());
         mainActivity.putExtra("userID",user.getUid());
         startActivity(mainActivity);
