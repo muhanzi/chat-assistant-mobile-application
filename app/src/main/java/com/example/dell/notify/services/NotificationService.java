@@ -36,12 +36,14 @@ public class NotificationService extends NotificationListenerService {
     private static final int NOTIF_ID = 1;
     private static final String NOTIF_CHANNEL_ID = "channel2";
     private TextToSpeech textToSpeech;
+    private SharedPreferences sharedpreferences;
     //
     @Override
     public void onCreate() {  // when notify is allowed to access notifications
         super.onCreate();
         textToSpeech = initializeTextToSpeech();
         context = getApplicationContext();
+        sharedpreferences = PreferenceManager.getDefaultSharedPreferences(context);
         createNotificationChannel();
         startforeground();
     }
@@ -102,12 +104,14 @@ public class NotificationService extends NotificationListenerService {
     private void readActiveNotifications() {
         // read all active notifications from this app on the status bar // and from others apps
         StatusBarNotification[] sbn= NotificationService.this.getActiveNotifications();  // may be null in case this app has not yet posted any notification on the status bar
-        //
+        boolean turn_on_notify=sharedpreferences.getBoolean("turn_on_notify",true); // in case sharedpreferences does not provide data, the default value of this boolean we set it to true
         for(StatusBarNotification noti : sbn){
             String packageName = noti.getPackageName();
             Bundle extras = noti.getNotification().extras;
 
-            say_the_text("Notify is now running in the background. Tap to open");
+            if(turn_on_notify){
+                say_the_text("Notify is now running in the background. Tap to open");
+            }
             //
         }
         STATUS_BAR_READ_ONCE=true; // status bar is read already

@@ -78,6 +78,7 @@ public class SpeakTextService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId){
         Log.e("SpeakTextService","SpeakTextService was started");
         boolean handling_pending_responses=sharedpreferences.getBoolean("handling_pending_responses",false); // default value --> false
+        Handler handler=new Handler();
         if(!handling_pending_responses){
             if(textToSpeech == null){
                 textToSpeech = initializeTextToSpeech();
@@ -89,8 +90,14 @@ public class SpeakTextService extends Service {
                 notification=intent.getStringExtra("notification");
                 packageName=intent.getStringExtra("package");
                 title=intent.getStringExtra("title");
+            }else if(type.equals("send_whatsapp_message")){
+                handler.postDelayed(() -> {
+                    Speak speak=new Speak();
+                    speak.execute();
+                },3000); // just 3 seconds // as google assistant is getting ready
+                return super.onStartCommand(intent, flags, startId);
             }
-            Handler handler=new Handler();
+            //
             handler.postDelayed(() -> {
                 Speak speak=new Speak();
                 speak.execute();

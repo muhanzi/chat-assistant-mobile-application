@@ -626,49 +626,9 @@ public class MainActivity extends AppCompatActivity{
     }
 
     private void send_message_on_whatsapp(final String text){
-        if (textToSpeech == null) {  // I'm doing this because the user may kill "--> onDestroy()"  the mainactivity which initializes the testToSpeech inside the onCreate  // so when our service sends the localBroadcast TextToSpeech will be available
-            textToSpeech = initializeTextToSpeech();
-            textToSpeech.setOnUtteranceProgressListener(utteranceProgressListener);
-        }
         final Intent intent=new Intent(Intent.ACTION_VOICE_COMMAND);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
-        //
-        /*
-        final Handler handler=new Handler();
-        handler.postDelayed(new Runnable(){
-            @Override
-            public void run(){
-                int speechStatus = textToSpeech.speak("send whatsapp message to "+title+"  "+text, TextToSpeech.QUEUE_FLUSH, null, null);
-                while(textToSpeech.isSpeaking()){  // works well // wait until it finishes talking
-                    Log.i("tts","text to speech");
-                }
-                empty_variables();
-                handler.postDelayed(new Runnable(){
-                    @Override
-                    public void run(){
-                        // bring MainActivity to the foreground // so that notification service stays alive
-                        bring_main_activity_to_foreground();
-                        //
-                        try{
-                            textToSpeech.stop();
-                            list_of_notifications.remove(0);
-                            if(!list_of_notifications.isEmpty()){
-                                process_notification(); // process the intent which is now on the position 0
-                            }else{
-                                audioManager.abandonAudioFocus(audioFocusChangeListener);
-                                SharedPreferences.Editor editor = sharedpreferences.edit();
-                                editor.putBoolean("notification_in_process",false);
-                                editor.apply(); // after processing all intents inside the arraylist
-                            }
-                        }catch (IndexOutOfBoundsException ex){
-                            Log.e("Exception","IndexOutOfBoundsException index at 0 does not exist // send_message_on_whatsapp() main activity");
-                        }
-                    }
-                },80000); // give google assistant 80 seconds to process
-            }
-        },3000); // 3 secs// just wait for google assistant to get ready
-        */
         // start service
         Intent speakService=  new Intent(this, SpeakTextService.class);
         speakService.putExtra("textToSay","send whatsapp message to "+title+"  "+text);
@@ -1443,6 +1403,7 @@ public class MainActivity extends AppCompatActivity{
         }
     }
 
+    // when user clicks the back button onStop() is called // then when a message comes SpeechRecognition works with errors // and MainActivity gets more the one instance
     @Override
     public void onBackPressed() {
         //to disable back button // just remove  super.onBackPressed();
