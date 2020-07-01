@@ -37,12 +37,18 @@
             android:theme="@style/SplashScreenTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".activities.ShowFragments"
+        <activity
+            android:name=".activities.ShowFragments"
             android:screenOrientation="portrait"
-            android:theme="@style/FragmentsTheme"/>
+            android:theme="@style/FragmentsTheme" />
+        <activity
+            android:name=".activities.Settings"
+            android:label="@string/title_activity_settings"
+            android:theme="@style/AppTheme"></activity>
 
         <service
             android:name=".services.NotificationService"
@@ -69,6 +75,10 @@
             android:name=".services.SpeakTextService"
             android:enabled="true"
             android:exported="true" />
+        <service
+            android:name=".services.RecognitionService"
+            android:enabled="true"
+            android:exported="true" />
 
         <receiver android:name=".broadcast_receivers.SMSReceived">
             <intent-filter>
@@ -76,10 +86,6 @@
             </intent-filter>
         </receiver>
 
-        <service
-            android:name=".services.RecognitionService"
-            android:enabled="true"
-            android:exported="true"></service>
     </application>
 
 </manifest>

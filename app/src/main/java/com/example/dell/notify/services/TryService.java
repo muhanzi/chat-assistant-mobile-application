@@ -16,6 +16,9 @@ import android.util.Log;
 
 import com.example.dell.notify.R;
 import com.example.dell.notify.activities.MainActivity;
+import com.example.dell.notify.activities.SplashScreen;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 public class TryService extends Service {
 
@@ -23,11 +26,14 @@ public class TryService extends Service {
     private static final int NOTIF_ID = 4;
     private static final String NOTIF_CHANNEL_ID = "channel3";
     private static final String NOTIF_CHANNEL_ID2 = "channel4";
+    private FirebaseAuth mAuth;
+
     @Override
     public void onCreate() {
 
         super.onCreate();
         context = getApplicationContext();
+        mAuth = FirebaseAuth.getInstance();
         createNotificationChannel();
         channelForNotificationsToRepeat();
         startforeground();// try
@@ -56,20 +62,39 @@ public class TryService extends Service {
     }
 
     private void startforeground() {
-        Intent notificationIntent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
-                notificationIntent, 0);
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if(currentUser != null){
+            Intent notificationIntent = new Intent(this, MainActivity.class);
+            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
+                    notificationIntent, 0);
 
-        // a foreground service always displays a notification in the status bar // so that the user is aware of this service which is always running
-        this.startForeground(NOTIF_ID, new NotificationCompat.Builder(this,  //!!! I changed this ---> startForeground(NOTIF_ID, new NotificationCompat.Builder(this,
-                NOTIF_CHANNEL_ID)
-                .setOngoing(true)
-                .setSmallIcon(R.drawable.notify_icon)
-                .setColor(getColor(R.color.projectColorCode))
-                .setContentTitle(getString(R.string.app_name))
-                .setContentText("Reads aloud all your notifications and Replies for you")
-                .setContentIntent(pendingIntent)
-                .build());
+            // a foreground service always displays a notification in the status bar // so that the user is aware of this service which is always running
+            this.startForeground(NOTIF_ID, new NotificationCompat.Builder(this,  //!!! I changed this ---> startForeground(NOTIF_ID, new NotificationCompat.Builder(this,
+                    NOTIF_CHANNEL_ID)
+                    .setOngoing(true)
+                    .setSmallIcon(R.drawable.notify_icon)
+                    .setColor(getColor(R.color.projectColorCode))
+                    .setContentTitle(getString(R.string.app_name))
+                    .setContentText("Reads aloud all your notifications and Replies for you")
+                    .setContentIntent(pendingIntent)
+                    .build());
+        }else{
+            Intent notificationIntent = new Intent(this, SplashScreen.class);
+            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
+                    notificationIntent, 0);
+
+            // a foreground service always displays a notification in the status bar // so that the user is aware of this service which is always running
+            this.startForeground(NOTIF_ID, new NotificationCompat.Builder(this,  //!!! I changed this ---> startForeground(NOTIF_ID, new NotificationCompat.Builder(this,
+                    NOTIF_CHANNEL_ID)
+                    .setOngoing(true)
+                    .setSmallIcon(R.drawable.notify_icon)
+                    .setColor(getColor(R.color.projectColorCode))
+                    .setContentTitle(getString(R.string.app_name))
+                    .setContentText("Reads aloud all your notifications and Replies for you")
+                    .setContentIntent(pendingIntent)
+                    .build());
+        }
+
     }
 
 

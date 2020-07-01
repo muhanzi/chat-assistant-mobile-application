@@ -24,6 +24,9 @@ import android.widget.Toast;
 
 import com.example.dell.notify.R;
 import com.example.dell.notify.activities.MainActivity;
+import com.example.dell.notify.activities.SplashScreen;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import java.util.Locale;
 
@@ -37,6 +40,7 @@ public class NotificationService extends NotificationListenerService {
     private static final String NOTIF_CHANNEL_ID = "channel2";
     private TextToSpeech textToSpeech;
     private SharedPreferences sharedpreferences;
+    private FirebaseAuth mAuth;
     //
     @Override
     public void onCreate() {  // when notify is allowed to access notifications
@@ -44,6 +48,7 @@ public class NotificationService extends NotificationListenerService {
         textToSpeech = initializeTextToSpeech();
         context = getApplicationContext();
         sharedpreferences = PreferenceManager.getDefaultSharedPreferences(context);
+        mAuth = FirebaseAuth.getInstance();
         createNotificationChannel();
         startforeground();
     }
@@ -120,39 +125,64 @@ public class NotificationService extends NotificationListenerService {
     ////////////////////////////////////////////////////////////////
 
     private void startforeground() {
-        Intent notificationIntent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
-                notificationIntent, 0);
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if(currentUser != null){
+            Intent notificationIntent = new Intent(this, MainActivity.class);
+            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
+                    notificationIntent, 0);
 
-        // a foreground service always displays a notification in the status bar // so that the user is aware of this service which is always running
-        this.startForeground(NOTIF_ID, new NotificationCompat.Builder(this,  //!!! I changed this ---> startForeground(NOTIF_ID, new NotificationCompat.Builder(this,
-                NOTIF_CHANNEL_ID)
-                .setOngoing(true)
-                .setSmallIcon(R.drawable.notify_icon)
-                .setColor(getColor(R.color.projectColorCode))
-                .setContentTitle(getString(R.string.app_name))
-                .setContentText("Notify is running in the background")
-                .setContentIntent(pendingIntent)
-                .build());
+            // a foreground service always displays a notification in the status bar // so that the user is aware of this service which is always running
+            this.startForeground(NOTIF_ID, new NotificationCompat.Builder(this,  //!!! I changed this ---> startForeground(NOTIF_ID, new NotificationCompat.Builder(this,
+                    NOTIF_CHANNEL_ID)
+                    .setOngoing(true)
+                    .setSmallIcon(R.drawable.notify_icon)
+                    .setColor(getColor(R.color.projectColorCode))
+                    .setContentTitle(getString(R.string.app_name))
+                    .setContentText("Notify is running in the background")
+                    .setContentIntent(pendingIntent)
+                    .build());
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(new Intent(getApplicationContext(),TryService.class));
-        }else{
-            startService(new Intent(getApplicationContext(),TryService.class));
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(new Intent(getApplicationContext(),TryService.class));
+            }else{
+                startService(new Intent(getApplicationContext(),TryService.class));
+            }
+            //
+            // start main activity // only if it is not running
+            SharedPreferences sharedpreferences = PreferenceManager.getDefaultSharedPreferences(context);
+            boolean mainActivityIsActive=sharedpreferences.getBoolean("MainActivityIsActive",true); // in case sharedpreferences does not provide data, the default value of this boolean we set it to true // we assume that the activity is running
+            if(!mainActivityIsActive){
+                Intent intent = new Intent(this, MainActivity.class);
+                intent.setAction(Intent.ACTION_MAIN);
+                intent.addCategory(Intent.CATEGORY_LAUNCHER); // as if user has clicked on the app to launch it
+                startActivity(intent);
+                MainActivity mainActivity = MainActivity.instance;
+                mainActivity.startNow();
+            }
+            //
+        }else {
+            Intent notificationIntent = new Intent(this, SplashScreen.class);
+            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
+                    notificationIntent, 0);
+
+            // a foreground service always displays a notification in the status bar // so that the user is aware of this service which is always running
+            this.startForeground(NOTIF_ID, new NotificationCompat.Builder(this,  //!!! I changed this ---> startForeground(NOTIF_ID, new NotificationCompat.Builder(this,
+                    NOTIF_CHANNEL_ID)
+                    .setOngoing(true)
+                    .setSmallIcon(R.drawable.notify_icon)
+                    .setColor(getColor(R.color.projectColorCode))
+                    .setContentTitle(getString(R.string.app_name))
+                    .setContentText("Notify is running in the background")
+                    .setContentIntent(pendingIntent)
+                    .build());
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(new Intent(getApplicationContext(),TryService.class));
+            }else{
+                startService(new Intent(getApplicationContext(),TryService.class));
+            }
         }
-        //
-        // start main activity // only if it is not running
-        SharedPreferences sharedpreferences = PreferenceManager.getDefaultSharedPreferences(context);
-        boolean mainActivityIsActive=sharedpreferences.getBoolean("MainActivityIsActive",true); // in case sharedpreferences does not provide data, the default value of this boolean we set it to true // we assume that the activity is running
-        if(!mainActivityIsActive){
-            Intent intent = new Intent(this, MainActivity.class);
-            intent.setAction(Intent.ACTION_MAIN);
-            intent.addCategory(Intent.CATEGORY_LAUNCHER); // as if user has clicked on the app to launch it
-            startActivity(intent);
-            MainActivity mainActivity = MainActivity.instance;
-            mainActivity.startNow();
-        }
-        //
+
     }
 
     private void say_the_text(String textToSay){
