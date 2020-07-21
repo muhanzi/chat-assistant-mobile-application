@@ -59,6 +59,8 @@ import com.example.dell.notify.R;
 import com.example.dell.notify.services.RecognitionService;
 import com.example.dell.notify.services.ServiceWithAlarmManager;
 import com.example.dell.notify.services.SpeakTextService;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -110,6 +112,8 @@ public class MainActivity extends AppCompatActivity{
     //
     private KeyguardManager keyguardManager;
     //
+    private FirebaseAuth mAuth;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -119,6 +123,7 @@ public class MainActivity extends AppCompatActivity{
         setSupportActionBar(tool_bar);
         getSupportActionBar().setTitle(R.string.appBarTitle);
         //
+        mAuth = FirebaseAuth.getInstance();
         //check if device is charging
         sharedpreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         String mode=sharedpreferences.getString("mode","");
@@ -198,7 +203,7 @@ public class MainActivity extends AppCompatActivity{
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.itemSettings:
-                Intent settings=new Intent(MainActivity.this, Settings.class);
+                Intent settings=new Intent(MainActivity.this, SettingsActivity.class);
                 startActivity(settings);
                 return true;
             case R.id.itemTurnOff:
@@ -318,6 +323,13 @@ public class MainActivity extends AppCompatActivity{
     @Override
     protected void onStart() {
         super.onStart();
+        // check current user
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if(currentUser == null){
+            Intent splashScreen = new Intent(MainActivity.this, SplashScreen.class);
+            splashScreen.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK); // !!!
+            startActivity(splashScreen);
+        }
         //check if device is charging
         String mode=sharedpreferences.getString("mode","");
         if(check_if_device_is_charging() || mode.equals("chatting_mode")){

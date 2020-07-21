@@ -14,8 +14,8 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.example.dell.notify.R;
-import com.example.dell.notify.fragments.MyFragmentsAdapter;
-import com.example.dell.notify.fragments.Page3;
+import com.example.dell.notify.fragments.walkthrough_fragments.MyFragmentsAdapter;
+import com.example.dell.notify.fragments.walkthrough_fragments.Page3;
 import com.google.firebase.auth.FirebaseUser;
 
 public class ShowFragments extends AppCompatActivity {

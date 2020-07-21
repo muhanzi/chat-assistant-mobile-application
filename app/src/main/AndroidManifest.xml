@@ -46,7 +46,7 @@
             android:screenOrientation="portrait"
             android:theme="@style/FragmentsTheme" />
         <activity
-            android:name=".activities.Settings"
+            android:name=".activities.SettingsActivity"
             android:label="@string/title_activity_settings"
             android:theme="@style/AppTheme"></activity>
 

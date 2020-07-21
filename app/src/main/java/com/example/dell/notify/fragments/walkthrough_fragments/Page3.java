@@ -1,4 +1,4 @@
-package com.example.dell.notify.fragments;
+package com.example.dell.notify.fragments.walkthrough_fragments;
 
 import android.Manifest;
 import android.content.Context;

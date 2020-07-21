@@ -1,4 +1,4 @@
-package com.example.dell.notify.fragments;
+package com.example.dell.notify.fragments.walkthrough_fragments;
 
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -12,22 +12,20 @@ import com.example.dell.notify.R;
 
 import static com.example.dell.notify.activities.ShowFragments.mypager;
 
-public class Page2 extends Fragment {
+public class Page1 extends Fragment {
 
-    private ImageView page2_previous,page2_next;
+    private ImageView page1_next;
     private View mainview;
 
-    public Page2() {
+    public Page1() {
     }
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        mainview= inflater.inflate(R.layout.fragment_page2, container, false);
-        page2_previous= mainview.findViewById(R.id.page2_previous);
-        page2_next= mainview.findViewById(R.id.page2_next);
-        page2_previous.setOnClickListener((view)-> mypager.setCurrentItem(0));
-        page2_next.setOnClickListener((view)-> mypager.setCurrentItem(2));
+        mainview= inflater.inflate(R.layout.fragment_page1, container, false);
+        page1_next= mainview.findViewById(R.id.page1_next);
+        page1_next.setOnClickListener((view)-> mypager.setCurrentItem(1));
         return mainview;
     }
 
