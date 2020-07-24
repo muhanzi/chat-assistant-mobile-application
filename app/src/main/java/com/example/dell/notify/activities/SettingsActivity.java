@@ -83,9 +83,7 @@ public class SettingsActivity extends AppCompatActivity
         } else if (id == R.id.logout) {
             mAuth.signOut();
             Intent splashScreen = new Intent(SettingsActivity.this, SplashScreen.class);
-            splashScreen.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK); // !!!
             startActivity(splashScreen);
-            finish();
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);

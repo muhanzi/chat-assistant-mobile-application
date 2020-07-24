@@ -104,4 +104,11 @@ public class ShowFragments extends AppCompatActivity {
         finish();
     }
 
+    @Override
+    public void onBackPressed() {
+        // not working
+        ShowFragments.this.finish();
+        System.exit(0);  // for logout to work well
+    }
+
 }
