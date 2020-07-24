@@ -184,7 +184,6 @@ public class SettingsPage1 extends Fragment {
                 CheckBox checkBox = (CheckBox) view.findViewById(R.id.app_checkBox);
                 boolean checkBoxChecked = checkBox.isChecked();
                 if(checkBoxChecked){
-                    String[] actions = {" Block", " Cancel"};
                     AlertDialog.Builder builder = new AlertDialog.Builder(context);
                     builder.setMessage("Do you want to block all notifications from this app ?");
                     builder.setPositiveButton("Block", (paramDialogInterface, paramInt) -> {
@@ -196,7 +195,6 @@ public class SettingsPage1 extends Fragment {
                     builder.setNegativeButton("Cancel", (paramDialogInterface, paramInt) -> Toast.makeText(context, "cancel", Toast.LENGTH_SHORT).show());
                     builder.show();
                 }else{
-                    String[] actions = {" Unblock", " Cancel"};
                     AlertDialog.Builder builder = new AlertDialog.Builder(context);
                     builder.setMessage("Do you want Notify to read all notifications from this app ?");
                     builder.setPositiveButton("Unblock", (paramDialogInterface, paramInt) -> {
