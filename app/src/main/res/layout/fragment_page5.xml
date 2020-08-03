@@ -169,7 +169,7 @@
         app:layout_constraintVertical_bias="0.836" />
 
     <TextView
-        android:id="@+id/dont_have_account"
+        android:id="@+id/already_have_account"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"

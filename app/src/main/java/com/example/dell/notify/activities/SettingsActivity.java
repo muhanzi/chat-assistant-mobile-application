@@ -11,6 +11,7 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.TextView;
 
 import com.example.dell.notify.R;
@@ -43,16 +44,16 @@ public class SettingsActivity extends AppCompatActivity
         toggle.syncState();
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+        View headerView = navigationView.getHeaderView(0); // get the header layout // the one passed in the xml --> app:headerLayout // it is the first header view so we get it at position 0
         navigationView.setNavigationItemSelectedListener(this);
+        user_email = (TextView) headerView.findViewById(R.id.user_email);
+        mAuth = FirebaseAuth.getInstance();
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if(currentUser != null){
+            user_email.setText(currentUser.getEmail());
+        }
 
         instance = this;
-
-//        user_email = (TextView) navigationView.findViewById(R.id.user_email);
-          mAuth = FirebaseAuth.getInstance();
-//        FirebaseUser currentUser = mAuth.getCurrentUser();
-//        if(currentUser != null){
-//            user_email.setText(currentUser.getEmail());
-//        }
 
         mypager= findViewById(R.id.settingsPager);
         adapter=new SettingsFragmentsAdapter(getSupportFragmentManager());

@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.dell.notify.R;
@@ -29,7 +30,7 @@ public class Page4 extends Fragment {
     private TextInputLayout email,password;
     private Button signIn,signInWithFacebook;
     private FirebaseAuth mAuth;
-
+    private TextView signUp;
 
     public Page4() {
     }
@@ -44,6 +45,7 @@ public class Page4 extends Fragment {
         password= mainview.findViewById(R.id.input_layout_password);
         signIn= mainview.findViewById(R.id.sign_in_button);
         signInWithFacebook= mainview.findViewById(R.id.sign_in_with_facebook);
+        signUp = mainview.findViewById(R.id.dont_have_account);
         prog =new ProgressDialog(getContext());
         prog.setMessage("please wait");
         prog.setCancelable(false);
@@ -51,7 +53,7 @@ public class Page4 extends Fragment {
         page4_previous.setOnClickListener((view)-> mypager.setCurrentItem(2));
         page4_next.setOnClickListener((view)-> mypager.setCurrentItem(4));
         signIn.setOnClickListener((view -> signIn()));
-
+        signUp.setOnClickListener(view -> mypager.setCurrentItem(4));
         return mainview;
     }
 
