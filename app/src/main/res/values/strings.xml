@@ -1,0 +1,68 @@
+<resources>
+    <string name="app_name">Notify</string>
+    <string name="channel_name">Notification channel 1</string>
+    <string name="channel_description">display notification</string>
+    <string name="channel_name2">Notification channel 2</string>
+    <string name="channel_name3">Notification channel 3</string>
+    <string name="channel_name4">Notification channel 4</string>
+    <string name="channel_name5">Notification channel 5</string>
+    <string name="channel_description2">channel for displaying notification of the foregroundservice</string>
+    <string name="charles_muhanzi_technologies">Charles Muhanzi Technologies</string>
+    <string name="notify_version_1_0">Notify version 1.0</string>
+    <string name="app_logo">app logo</string>
+    <string name="start_now">Start Now</string>
+    <string name="open_settings">Open Settings</string>
+    <string name="appBarTitle">Notify</string>
+    <string name="settings">Settings</string>
+    <string name="turn_off">Turn off</string>
+    <string name="reported_spams">Reported spams</string>
+    <string name="notify_is_running">Notify is running</string>
+    <string name="your_personal_chat_assistant">Your personal chat Assistant</string>
+    <string name="home">home</string>
+    <string name="change_mode">Change mode</string>
+    <string name="next">Next</string>
+    <string name="reads_aloud_your_messages_and_notifications_from">Reads aloud your messages and notifications from</string>
+    <string name="reply_with_voice">Reply with voice</string>
+    <string name="reply_with_voice2">Helps you reply with voice.</string>
+    <string name="previous">Previous</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="notify">Notify</string>
+    <string name="different_modes_are_available_default_mode_chatting_mode_and_sms_mode">Different modes are available: Default mode, Chatting mode and SMS mode.</string>
+    <string name="a_spam_classifier_to_filter_notifications_from_various_websites_and_applications">A spam classifier to filter notifications from various websites and applications</string>
+    <string name="sign_in">Sign in</string>
+    <string name="sign_up">Sign up</string>
+    <string name="requires_permission_to_access_your_contacts_to_use_microphone_to_send_sms_and_permission_to_write_settings">Requires permission to access your contacts, to use microphone, to send SMS and permission to write settings.</string>
+    <string name="grant_permissions">Grant Permissions</string>
+    <string name="permissions_granted">Permissions Granted</string>
+    <string name="password">Password</string>
+    <string name="email_address">Email address</string>
+    <string name="sign_in_using_facebook">Sign in using Facebook</string>
+    <string name="sign_up_using_facebook">Sign up using Facebook</string>
+    <string name="don_t_have_account_sign_up_here">Don\'t have account? sign up here</string>
+    <string name="already_have_an_account_sign_in_here">Already have an account? sign in here</string>
+    <string name="name">Name</string>
+    <string name="title_activity_main2">Main2Activity</string>
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_notifications">Notifications</string>
+    <string name="title_activity_settings">Settings</string>
+
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+
+    <string name="action_settings">Settings</string>
+    <string name="apps">Apps</string>
+    <string name="contacts">Contacts</string>
+    <string name="dictionary">Dictionary</string>
+    <string name="user_email">user email</string>
+    <string name="report_issue">Report Issue</string>
+    <string name="turn_off_spam_filter">Turn Off Spam Filter</string>
+    <string name="logout">Logout</string>
+    <string name="appname">App name</string>
+    <string name="contact_name">contact name</string>
+    <string name="contact_number">contact number</string>
+    <string name="lol">LOL</string>
+    <string name="laugh_out_loud">Laugh Out Loud</string>
+</resources>
