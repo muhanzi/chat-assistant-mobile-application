@@ -1,6 +1,7 @@
 package com.muhanzi.notify.fragments.settings_fragments;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 
 import android.util.Log;
@@ -9,16 +10,18 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.muhanzi.notify.R;
 import com.firebase.ui.firestore.FirestoreRecyclerAdapter;
 import com.firebase.ui.firestore.FirestoreRecyclerOptions;
-import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
+import com.muhanzi.notify.activities.AddDictionary;
 
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -36,7 +39,7 @@ public class SettingsPage3 extends Fragment {
     private FirebaseFirestore db;
     private FirestoreRecyclerAdapter adapter;
     private LinearLayoutManager linearLayoutManager;
-
+    private FloatingActionButton addToDictionary;
 
     public SettingsPage3() {
     }
@@ -49,6 +52,14 @@ public class SettingsPage3 extends Fragment {
         mAuth = FirebaseAuth.getInstance();
         firebaseUser = mAuth.getCurrentUser();
         progressBar = (ProgressBar) mainview.findViewById(R.id.progressBarPage3);
+        addToDictionary = (FloatingActionButton) mainview.findViewById(R.id.addToDictionary);
+        addToDictionary.setOnClickListener(view -> {
+            Intent addDictionary = new Intent(context, AddDictionary.class);
+            addDictionary.putExtra("abbreviation","");
+            addDictionary.putExtra("meaning","");
+            startActivity(addDictionary);
+            Toast.makeText(context, "to create a new word in your dictionary", Toast.LENGTH_SHORT).show();
+        });
         recyclerView = (RecyclerView) mainview.findViewById(R.id.dictionary_recyclerView);
         init();
         getFriendList();
@@ -74,8 +85,10 @@ public class SettingsPage3 extends Fragment {
                 holder.abbreviation.setText(model.getAbbreviation().toUpperCase());
                 holder.meaning.setText(model.getMeaning());
                 holder.itemView.setOnClickListener(v -> {
-                    Snackbar.make(recyclerView, model.getAbbreviation()+" : "+model.getMeaning(), Snackbar.LENGTH_LONG)
-                            .setAction("Action", null).show();
+                    Intent addDictionary = new Intent(context, AddDictionary.class);
+                    addDictionary.putExtra("abbreviation",model.getAbbreviation());
+                    addDictionary.putExtra("meaning",model.getMeaning());
+                    startActivity(addDictionary);
                 });
             }
 

@@ -86,7 +86,8 @@ public class NotificationService extends NotificationListenerService {
         msgrcv.putExtra("text", text);
         //
         String sms_package_name=Telephony.Sms.getDefaultSmsPackage(context);
-        if(packageName.equals("android") || packageName.equals("com.example.dell.notify") || packageName.equals(sms_package_name)){
+        String Notify_package_name=context.getPackageName();
+        if(packageName.equals("android") || packageName.equals(Notify_package_name) || packageName.equals(sms_package_name)){
             return;
         }
 
