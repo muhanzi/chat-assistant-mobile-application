@@ -103,14 +103,17 @@ public class Page5 extends Fragment {
                                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                                     @Override
                                     public void onSuccess(Void aVoid) {
+                                        String abbreviation = "lol";
+                                        String meaning = "laugh out loud";
                                         Map<String, Object> word = new HashMap<>();
-                                        word.put("abbreviation", "lol");
-                                        word.put("meaning", "laugh out loud");
+                                        word.put("abbreviation", abbreviation);
+                                        word.put("meaning", meaning);
                                         db.collection("users").document(firebaseUser.getUid())
-                                                .collection("dictionary").add(word)
-                                                .addOnCompleteListener(new OnCompleteListener<DocumentReference>() {
+                                                .collection("dictionary").document(abbreviation.toLowerCase().replaceAll(" ",""))
+                                                .set(word)
+                                                .addOnCompleteListener(new OnCompleteListener<Void>() {
                                                     @Override
-                                                    public void onComplete(@NonNull Task<DocumentReference> task) {
+                                                    public void onComplete(@NonNull Task<Void> task) {
                                                         if(task.isSuccessful()){
                                                             ShowFragments.instance.startMainActivity(firebaseUser);
                                                         }else {

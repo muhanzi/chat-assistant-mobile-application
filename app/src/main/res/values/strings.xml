@@ -13,6 +13,7 @@
     <string name="start_now">Start Now</string>
     <string name="open_settings">Open Settings</string>
     <string name="appBarTitle">Notify</string>
+    <string name="editDictionary">Edit Dictionary</string>
     <string name="settings">Settings</string>
     <string name="turn_off">Turn off</string>
     <string name="reported_spams">Reported spams</string>
@@ -66,4 +67,10 @@
     <string name="lol">LOL</string>
     <string name="laugh_out_loud">Laugh Out Loud</string>
     <string name="edit">edit</string>
+    <string name="abbreviation">Abbreviation</string>
+    <string name="meaning">Meaning</string>
+    <string name="delete">Delete</string>
+    <string name="save">Save</string>
+    <string name="update_button_text">Update</string>
+    <string name="save_button_text">Save</string>
 </resources>

@@ -58,7 +58,7 @@ public class SettingsPage3 extends Fragment {
             addDictionary.putExtra("abbreviation","");
             addDictionary.putExtra("meaning","");
             startActivity(addDictionary);
-            Toast.makeText(context, "to create a new word in your dictionary", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "Add a new abbreviation in your dictionary", Toast.LENGTH_SHORT).show();
         });
         recyclerView = (RecyclerView) mainview.findViewById(R.id.dictionary_recyclerView);
         init();

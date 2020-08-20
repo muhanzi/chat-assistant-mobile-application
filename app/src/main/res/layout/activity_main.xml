@@ -8,7 +8,8 @@
     tools:context="com.muhanzi.notify.activities.MainActivity"
     android:background="@color/colorPrimary">
 
-    <include layout="@layout/app_bar" android:id="@+id/mainActivityAppBar" />
+<!--    <include layout="@layout/app_bar" android:id="@+id/mainActivityAppBar" />-->
+    <include layout="@layout/edit_dictionary_app_bar" android:id="@+id/mainActivityAppBar" />
 
     <Button
         android:id="@+id/start_now"
