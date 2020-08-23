@@ -22,14 +22,27 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import androidx.annotation.NonNull;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class SpeakTextService extends Service {
@@ -44,6 +57,9 @@ public class SpeakTextService extends Service {
     private SharedPreferences sharedpreferences;
     private RequestQueue queue;
     private static final String TAG="volley queue";
+    private FirebaseAuth mAuth;
+    private FirebaseUser firebaseUser;
+    private FirebaseFirestore db;
 
     public SpeakTextService() {
     }
@@ -58,6 +74,9 @@ public class SpeakTextService extends Service {
         LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("pending_responses"));
         // Instantiate the RequestQueue.
         queue = Volley.newRequestQueue(this);
+        mAuth = FirebaseAuth.getInstance();
+        firebaseUser = mAuth.getCurrentUser();
+        db = FirebaseFirestore.getInstance();
     }
 
     BroadcastReceiver broadcastReceiver=new BroadcastReceiver() {
@@ -232,13 +251,41 @@ public class SpeakTextService extends Service {
                             //String email_text = response.getString("email_text");
                             //int status = response.getInt("status"); // HTTP response codes // 200 for okay
                             if(email_class.equals("spam")){
-                                // we display spams in ListView  // and save it in Firestore when we integrate it
-                                // report the spam // packageName,text,title,current date & time
-                                Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
-                                FinishSpeaking.putExtra("type",type);
-                                LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
-                                Log.i("SpamFilter","notification looks like a spam: "+notification_text+" Spam from: "+packageName);
-                                Toast.makeText(context, "notification looks like a spam: "+notification_text+" Spam from: "+packageName, Toast.LENGTH_SHORT).show();
+                                String date,time;
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                    DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                                    DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm:ss a");
+                                    LocalDateTime currentDate = LocalDateTime.now();
+                                    date= currentDate.format(dateFormat);
+                                    time= currentDate.format(timeFormat);
+                                }else{
+                                    Calendar calendar = Calendar.getInstance();
+                                    Date currentDate = calendar.getTime();
+                                    SimpleDateFormat dateFormat = (SimpleDateFormat) SimpleDateFormat.getDateInstance();
+                                    SimpleDateFormat timeFormat = (SimpleDateFormat) SimpleDateFormat.getTimeInstance();
+                                    date=dateFormat.format(currentDate);
+                                    time=timeFormat.format(currentDate);
+                                }
+                                Map<String, Object> spam = new HashMap<>();
+                                spam.put("spamText", notification_text);
+                                spam.put("notificationTitle", title);
+                                spam.put("packageName", packageName);
+                                spam.put("date", date);
+                                spam.put("time", time);
+                                db.collection("users").document(firebaseUser.getUid())
+                                        .collection("spams").add(spam)
+                                        .addOnCompleteListener(new OnCompleteListener<DocumentReference>() {
+                                            @Override
+                                            public void onComplete(@NonNull Task<DocumentReference> task) {
+                                                Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
+                                                FinishSpeaking.putExtra("type",type);
+                                                LocalBroadcastManager.getInstance(context).sendBroadcast(FinishSpeaking);
+                                                Log.i("SpamFilter","notification looks like a spam: "+notification_text+" Spam from: "+packageName);
+                                                if(task.isSuccessful()){
+                                                    Toast.makeText(context, "notification looks like a spam: "+notification_text+" Spam from: "+packageName, Toast.LENGTH_SHORT).show();
+                                                }
+                                            }
+                                        });
                             }else{
                                 // it's a ham
                                 Intent FinishSpeaking = new Intent("Speaking"); // action --> "Speaking"
