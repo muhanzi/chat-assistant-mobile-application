@@ -28,19 +28,21 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 import androidx.annotation.NonNull;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -60,6 +62,7 @@ public class SpeakTextService extends Service {
     private FirebaseAuth mAuth;
     private FirebaseUser firebaseUser;
     private FirebaseFirestore db;
+    private ArrayList<Map> dictionary;
 
     public SpeakTextService() {
     }
@@ -77,6 +80,24 @@ public class SpeakTextService extends Service {
         mAuth = FirebaseAuth.getInstance();
         firebaseUser = mAuth.getCurrentUser();
         db = FirebaseFirestore.getInstance();
+        getDictionary();
+    }
+
+    private void getDictionary() {
+        db.collection("users").document(firebaseUser.getUid())
+                .collection("dictionary").get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        for (QueryDocumentSnapshot document : Objects.requireNonNull(task.getResult())) {
+                            Map<String, Object> word = new HashMap<>();
+                            word.put("abbreviation", document.getString("abbreviation"));
+                            word.put("meaning", document.getString("meaning"));
+                            dictionary.add(word);
+                        }
+                    } else {
+                        Log.w(TAG, "Error getting documents.", task.getException());
+                    }
+                });
     }
 
     BroadcastReceiver broadcastReceiver=new BroadcastReceiver() {
@@ -182,11 +203,11 @@ public class SpeakTextService extends Service {
         protected Void doInBackground(Void... voids) {
             //
             if(!textToSay.equals("")){
-//                if(!type.equals("send_whatsapp_message")) {
-//                    for (HashMap map : new ArrayList<HashMap>()) { // this arraylist will be already loaded // in onCreate()
-//                        textToSay.replaceAll(map.get("abbreviation").toString(), map.get("meaning").toString());
-//                    }
-//                }
+                if(!type.equals("send_whatsapp_message")) {
+                    for (Map map : dictionary) {
+                        textToSay.replaceAll(map.get("abbreviation").toString(), map.get("meaning").toString());
+                    }
+                }
                 int speechStatus = textToSpeech.speak(textToSay, TextToSpeech.QUEUE_FLUSH, null, null);
                 while(textToSpeech.isSpeaking()){
                     Log.i("tts","text to speech  // saying the message");
