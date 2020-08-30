@@ -42,6 +42,8 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.muhanzi.notify.services.MyService;
 import com.muhanzi.notify.services.NotificationService;
 import com.muhanzi.notify.broadcast_receivers.PhoneUnlockedBroadcastReceiver;
@@ -55,6 +57,7 @@ import com.google.firebase.auth.FirebaseUser;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 import androidx.appcompat.app.AlertDialog;
@@ -112,6 +115,10 @@ public class MainActivity extends AppCompatActivity {
     private KeyguardManager keyguardManager;
     //
     private FirebaseAuth mAuth;
+    private FirebaseUser firebaseUser;
+    private FirebaseFirestore db;
+    private ArrayList<String> blockedNumbers;
+    private static final String TAG="Load blocked numbers";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -123,6 +130,9 @@ public class MainActivity extends AppCompatActivity {
         getSupportActionBar().setTitle(R.string.appBarTitle);
         //
         mAuth = FirebaseAuth.getInstance();
+        firebaseUser = mAuth.getCurrentUser();
+        db = FirebaseFirestore.getInstance();
+        blockedNumbers = getBlockedNumbers();
         //check if device is charging
         sharedpreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         String mode=sharedpreferences.getString("mode","");
@@ -323,8 +333,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         // check current user
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if(currentUser == null){
+        firebaseUser = mAuth.getCurrentUser();
+        if(firebaseUser == null){
             Intent splashScreen = new Intent(MainActivity.this, SplashScreen.class);
             startActivity(splashScreen);
             return;
@@ -1021,7 +1031,7 @@ public class MainActivity extends AppCompatActivity {
             super.onPostExecute(aVoid);
             //
             if(!contact_name.equals("")){ // means the title was found in our contacts
-                if(isValidPhoneNumber()){
+                if(isValidPhoneNumber() && isNotBlocked()){ // or if phone number is part of the banned numbers
                     //
                     Intent speakService=  new Intent(MainActivity.this, SpeakTextService.class);
                     speakService.putExtra("textToSay"," if you would like to reply, please say your message:");
@@ -1415,6 +1425,33 @@ public class MainActivity extends AppCompatActivity {
                     System.exit(0);
                 });
         alertDialogBuilder.show();
+    }
+
+    private ArrayList<String> getBlockedNumbers() {
+        ArrayList<String> numbers = new ArrayList<>();
+        db.collection("users").document(firebaseUser.getUid())
+                .collection("blockedContacts").get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        for (QueryDocumentSnapshot document : Objects.requireNonNull(task.getResult())) {
+                            numbers.add(document.getString("contactNumber"));
+                        }
+                    } else {
+                        Log.w(TAG, "Error getting documents.", task.getException());
+                    }
+                });
+        return numbers;
+    }
+
+    private boolean isNotBlocked(){
+        boolean isBlocked = false;
+        for(String blockednum : blockedNumbers){
+            if(blockednum.replaceAll("\\s","").equals(sms_to_phone_number)){
+                isBlocked = true;
+                break;
+            }
+        }
+        return !isBlocked;
     }
 
 }

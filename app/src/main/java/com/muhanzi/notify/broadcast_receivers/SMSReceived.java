@@ -13,6 +13,14 @@ import android.telephony.SmsMessage;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+
+import java.util.ArrayList;
+import java.util.Objects;
+
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 /**
@@ -24,35 +32,41 @@ public class SMSReceived extends BroadcastReceiver {
     private Cursor cursor;
     private String messageText="",messageFromNumber="",messageTitle="",packageName="";
     private Context ctx;
+    private FirebaseAuth mAuth;
+    private FirebaseUser firebaseUser;
+    private FirebaseFirestore db;
+    private ArrayList<String> blockedNumbers;
+    private static final String TAG="Load blocked numbers";
 
     @Override
     public void onReceive(Context context, Intent intent) {
-//        Log.i("sms ", "sms is received ");
-//        Log.i("sms ", "sms is received ");
         if(context.checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED){
             Toast.makeText(context, "Allow Notify to access phone contacts", Toast.LENGTH_SHORT).show();
             return;
         }
-        //
         cursor = context.getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null, null, null, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC");
         packageName=Telephony.Sms.getDefaultSmsPackage(context);
         ctx=context;
+        mAuth = FirebaseAuth.getInstance();
+        firebaseUser = mAuth.getCurrentUser();
+        db = FirebaseFirestore.getInstance();
+        blockedNumbers = getBlockedNumbers();
         if (Telephony.Sms.Intents.SMS_RECEIVED_ACTION.equals(intent.getAction())) {
-//            Log.i("sms ", "SMS_RECEIVED_ACTION ");
             for (SmsMessage smsMessage : Telephony.Sms.Intents.getMessagesFromIntent(intent)) {
                 messageText = smsMessage.getMessageBody(); // message text
                 messageFromNumber = smsMessage.getOriginatingAddress().trim().replaceAll("\\s",""); // phone number
-                if(isValidPhoneNumber(messageFromNumber)){
-                    RetrieveContacts retrieveContacts=new RetrieveContacts();
-                    retrieveContacts.execute();
-                }else{
-                    // sms is a bulk sms // or from call center eg. 145
-                    Intent msgrcv = new Intent("Msg"); // action --> "Msg"
-                    msgrcv.putExtra("package", packageName);
-                    msgrcv.putExtra("title", messageFromNumber); // bulk sms
-                    msgrcv.putExtra("text", messageText);
-                    msgrcv.putExtra("number", messageFromNumber); // bulk sms
-                    LocalBroadcastManager.getInstance(ctx).sendBroadcast(msgrcv);
+                if(isNotBlocked()) {
+                    if (isValidPhoneNumber(messageFromNumber)) {
+                        RetrieveContacts retrieveContacts = new RetrieveContacts();
+                        retrieveContacts.execute();
+                    } else {
+                        Intent msgrcv = new Intent("Msg"); // action --> "Msg"
+                        msgrcv.putExtra("package", packageName);
+                        msgrcv.putExtra("title", messageFromNumber); // bulk sms
+                        msgrcv.putExtra("text", messageText);
+                        msgrcv.putExtra("number", messageFromNumber); // bulk sms
+                        LocalBroadcastManager.getInstance(ctx).sendBroadcast(msgrcv);
+                    }
                 }
             }
         }
@@ -64,7 +78,6 @@ public class SMSReceived extends BroadcastReceiver {
         String number=phoneNumber.replace("+",""); // first remove the + sign then verify the left characters
         if(number.length() >= 10 && number.length() <= 12){
             // check if number has letters // or check if it is a bulk sms likely with letters or other special characters
-//            Log.i("PhoneNumber","current value of phone number is: "+number);
             if(number.matches("[0-9]+")){
                 return true;
             }
@@ -81,19 +94,15 @@ public class SMSReceived extends BroadcastReceiver {
 
         @Override
         protected Void doInBackground(Void... voids) {
-            //
-//            Log.i("sms ", "doInBackground ");
             if(cursor != null){
                 if(cursor.getCount() > 0){
                     String contact_number;
                     while(cursor.moveToNext()){
                         contact_number=cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)).trim().replaceAll("\\s","");
                         String name=cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
-//                        Log.i("sms ", "messageFromNumber : "+messageFromNumber+" currentContact : "+contact_number+" name: "+name);
-                        if(isValidPhoneNumber(contact_number)){ // the number is our contacts must also be valid
+                        if(isValidPhoneNumber(contact_number)){ // the number in our contacts must also be valid
                             if(matchNumbers(contact_number.replace("+",""),messageFromNumber.replace("+",""))){
                                 messageTitle=cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
-//                                Log.i("Cursor ", "the value of sms title is: "+messageTitle);
                                 break;
                             }
                         }
@@ -111,7 +120,6 @@ public class SMSReceived extends BroadcastReceiver {
         @Override
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
-//            Log.i("onPostExecute()", "messageFromNumber: "+messageFromNumber+" messageTitle: "+messageTitle);
             if(!messageTitle.equals("")){
                 Intent msgrcv = new Intent("Msg"); // action --> "Msg"
                 msgrcv.putExtra("package", packageName);
@@ -132,31 +140,52 @@ public class SMSReceived extends BroadcastReceiver {
 
         private boolean matchNumbers (String number1,String number2){
             // we compare the last 9 characters of a phone number // that means we leave out the starting 0 or the +country code
-//            Log.i("sms ", "number1 length is: "+number1.length()+" number2 length is: "+number2.length());
             boolean characters_are_equal=false;
             int number1_length=number1.length(),number2_length=number2.length();  // index starts from 0
             number1=number1.substring(number1_length-9); // get the last 9 digits
             number2=number2.substring(number2_length-9); // get the last 9 digits
-//            Log.i("sms ", "number1 : "+number1+" number2 : "+number2);
             // after substring  length of number1 is 9 and length of number2 is also 9
             for(int i=8;i>=0;i--){ // from index 0 --> 8 // 9 characters
                 Character ch1=number1.charAt(i);
                 Character ch2=number2.charAt(i);
-//                Log.i("sms ", "ch1 : "+ch1+" ch2 : "+ch2);
                 if(ch1.equals(ch2)){
-//                    Log.i("sms ", "ch1 and ch2 are equal");
                     characters_are_equal=true;
                 }else{
-//                    Log.i("sms ", "ch1 and ch2 are different");
                     characters_are_equal=false;
                     break;
                 }
             }
-//            Log.i("sms ", "the numbers are equal? : "+characters_are_equal);
             return characters_are_equal;
         }
 
     }
 
+
+    private ArrayList<String> getBlockedNumbers() {
+        ArrayList<String> numbers = new ArrayList<>();
+        db.collection("users").document(firebaseUser.getUid())
+                .collection("blockedContacts").get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        for (QueryDocumentSnapshot document : Objects.requireNonNull(task.getResult())) {
+                            numbers.add(document.getString("contactNumber"));
+                        }
+                    } else {
+                        Log.w(TAG, "Error getting documents.", task.getException());
+                    }
+                });
+        return numbers;
+    }
+
+    private boolean isNotBlocked(){
+        boolean isBlocked = false;
+        for(String blockednum : blockedNumbers){
+            if(blockednum.replaceAll("\\s","").equals(messageFromNumber)){
+                isBlocked = true;
+                break;
+            }
+        }
+        return !isBlocked;
+    }
 
 }

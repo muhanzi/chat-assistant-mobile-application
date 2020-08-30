@@ -59,6 +59,7 @@ public class SpeakTextService extends Service {
     private SharedPreferences sharedpreferences;
     private RequestQueue queue;
     private static final String TAG="volley queue";
+    private static final String TAG1 ="Load Dictionary";
     private FirebaseAuth mAuth;
     private FirebaseUser firebaseUser;
     private FirebaseFirestore db;
@@ -80,6 +81,7 @@ public class SpeakTextService extends Service {
         mAuth = FirebaseAuth.getInstance();
         firebaseUser = mAuth.getCurrentUser();
         db = FirebaseFirestore.getInstance();
+        dictionary = new ArrayList<>();
         getDictionary();
     }
 
@@ -95,7 +97,7 @@ public class SpeakTextService extends Service {
                             dictionary.add(word);
                         }
                     } else {
-                        Log.w(TAG, "Error getting documents.", task.getException());
+                        Log.w(TAG1, "Error getting documents.", task.getException());
                     }
                 });
     }
@@ -197,15 +199,16 @@ public class SpeakTextService extends Service {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
+            textToSay = textToSay.toLowerCase();
         }
 
         @Override
         protected Void doInBackground(Void... voids) {
             //
             if(!textToSay.equals("")){
-                if(!type.equals("send_whatsapp_message")) {
+                if(!type.equals("reply") && !type.equals("send_whatsapp_message") && !type.equals("phone_locked")) {
                     for (Map map : dictionary) {
-                        textToSay.replaceAll(map.get("abbreviation").toString(), map.get("meaning").toString());
+                        textToSay = textToSay.replaceAll(map.get("abbreviation").toString(), map.get("meaning").toString());
                     }
                 }
                 int speechStatus = textToSpeech.speak(textToSay, TextToSpeech.QUEUE_FLUSH, null, null);

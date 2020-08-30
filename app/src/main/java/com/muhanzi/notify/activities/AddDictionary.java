@@ -1,6 +1,5 @@
 package com.muhanzi.notify.activities;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -12,8 +11,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -93,8 +90,8 @@ public class AddDictionary extends AppCompatActivity {
             FirebaseFirestore db = FirebaseFirestore.getInstance();
             String documentID = abbreviation_text.toLowerCase().replaceAll(" ","");
             Map<String, Object> word = new HashMap<>();
-            word.put("abbreviation", abbreviation_text);
-            word.put("meaning", meaning_text);
+            word.put("abbreviation", abbreviation_text.toLowerCase());
+            word.put("meaning", meaning_text.toLowerCase());
             db.collection("users").document(firebaseUser.getUid())
                     .collection("dictionary").document(documentID)
                     .set(word)
@@ -140,8 +137,8 @@ public class AddDictionary extends AppCompatActivity {
             FirebaseFirestore db = FirebaseFirestore.getInstance();
             String documentID = abbreviation_text.toLowerCase().replaceAll(" ","");
             Map<String, Object> word = new HashMap<>();
-            word.put("abbreviation", abbreviation_text);
-            word.put("meaning", meaning_text);
+            word.put("abbreviation", abbreviation_text.toLowerCase());
+            word.put("meaning", meaning_text.toLowerCase());
             db.collection("users").document(firebaseUser.getUid())
                     .collection("dictionary").document(documentID)
                     .update(word)
@@ -162,8 +159,8 @@ public class AddDictionary extends AppCompatActivity {
     }
 
     private void deleteFromDictionary(){
-        String abbreviation_text = abbreviation.getText().toString().trim();
-        String meaning_text = meaning.getText().toString().trim();
+        String abbreviation_text = abbreviation.getText().toString().trim().toLowerCase();
+        String meaning_text = meaning.getText().toString().trim().toLowerCase();
         if(!abbreviation_text.isEmpty() && !meaning_text.isEmpty()){
             if(abbreviation_text.equals(extra_abbreviation)){
                 AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -209,8 +206,8 @@ public class AddDictionary extends AppCompatActivity {
                     .addOnCompleteListener(task -> {
                         if(task.isSuccessful()){
                             Map<String, Object> word = new HashMap<>();
-                            word.put("abbreviation", abbreviation_text);
-                            word.put("meaning", meaning_text);
+                            word.put("abbreviation", abbreviation_text.toLowerCase());
+                            word.put("meaning", meaning_text.toLowerCase());
                             db.collection("users").document(firebaseUser.getUid())
                                     .collection("dictionary").document(abbreviation_text.toLowerCase().replaceAll(" ",""))
                                     .set(word)

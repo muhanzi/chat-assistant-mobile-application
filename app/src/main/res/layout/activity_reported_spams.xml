@@ -6,4 +6,6 @@
     android:layout_height="match_parent"
     tools:context=".activities.ReportedSpams">
 
+    <include layout="@layout/edit_dictionary_app_bar" android:id="@+id/reportedSpamsAppBar" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

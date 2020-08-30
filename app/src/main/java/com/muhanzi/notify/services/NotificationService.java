@@ -20,13 +20,17 @@ import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.muhanzi.notify.R;
 import com.muhanzi.notify.activities.MainActivity;
 import com.muhanzi.notify.activities.SplashScreen;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
+import java.util.ArrayList;
 import java.util.Locale;
+import java.util.Objects;
 
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -42,6 +46,10 @@ public class NotificationService extends NotificationListenerService {
     private TextToSpeech textToSpeech;
     private SharedPreferences sharedpreferences;
     private FirebaseAuth mAuth;
+    private FirebaseUser firebaseUser;
+    private FirebaseFirestore db;
+    private ArrayList<String> blockedApps;
+    private static final String TAG="Load blocked apps";
     //
     @Override
     public void onCreate() {  // when notify is allowed to access notifications
@@ -50,8 +58,11 @@ public class NotificationService extends NotificationListenerService {
         context = getApplicationContext();
         sharedpreferences = PreferenceManager.getDefaultSharedPreferences(context);
         mAuth = FirebaseAuth.getInstance();
+        firebaseUser = mAuth.getCurrentUser();
+        db = FirebaseFirestore.getInstance();
         createNotificationChannel();
         startforeground();
+        blockedApps = getBlockedApps();
     }
 
     @Override
@@ -61,6 +72,9 @@ public class NotificationService extends NotificationListenerService {
             return;
         }
         String packageName = sbn.getPackageName();
+        if(isBlocked(packageName)){
+            return;
+        }
         String ticker ="";
         if(sbn.getNotification().tickerText !=null) {
             ticker = sbn.getNotification().tickerText.toString();
@@ -251,6 +265,33 @@ public class NotificationService extends NotificationListenerService {
         myServiceIntent.setPackage(getPackageName());
         startService(myServiceIntent);
         super.onTaskRemoved(rootIntent);
+    }
+
+    private ArrayList<String> getBlockedApps() {
+        ArrayList<String> apps = new ArrayList<>();
+        db.collection("users").document(firebaseUser.getUid())
+                .collection("blockedApps").get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        for (QueryDocumentSnapshot document : Objects.requireNonNull(task.getResult())) {
+                            apps.add(document.getString("packageName"));
+                        }
+                    } else {
+                        Log.w(TAG, "Error getting documents.", task.getException());
+                    }
+                });
+        return apps;
+    }
+
+    private boolean isBlocked(String packageName){
+        boolean isBlocked = false;
+        for(String app : blockedApps){
+            if(app.equals(packageName)){
+                isBlocked = true;
+                break;
+            }
+        }
+        return isBlocked;
     }
 
 }
