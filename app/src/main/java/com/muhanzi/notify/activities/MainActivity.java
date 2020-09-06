@@ -216,11 +216,11 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(settings);
                 return true;
             case R.id.itemTurnOff:
-                // Turn Notify off
                 turnOffNotify();
                 return true;
             case R.id.itemReportedSpams:
-                // open activity to see all reported spams
+                Intent spams = new Intent(MainActivity.this, ReportedSpams.class);
+                startActivity(spams);
                 return true;
             case R.id.itemChangeMode:
                 change_mode();

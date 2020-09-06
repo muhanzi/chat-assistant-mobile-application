@@ -48,6 +48,14 @@
         <item name="android:windowAnimationStyle">@style/CustomActivityAnimation</item>
     </style>
 
+    <style name="ReportedSpamTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:statusBarColor">@color/colorPrimaryDark</item>
+        <item name="android:windowAnimationStyle">@style/CustomActivityAnimation</item>
+    </style>
+
     <style name="AppBarTextStyle" parent="AppTheme">
         <item name="android:textSize">35sp</item>
         <item name="android:textStyle">bold</item>
@@ -59,6 +67,10 @@
 
     <style name="AppBarStyle" parent="AppTheme">
         <item name="android:textColorSecondary">@color/projectColorCode</item>
+    </style>
+
+    <style name="ReportedSpamAppBarStyle" parent="AppTheme">
+        <item name="android:textColorSecondary">@color/colorPrimary</item>
     </style>
 
     <style name="FragmentsTheme" parent="Theme.AppCompat.Light.NoActionBar">
