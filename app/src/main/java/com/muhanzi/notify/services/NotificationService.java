@@ -20,8 +20,11 @@ import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.muhanzi.notify.R;
 import com.muhanzi.notify.activities.MainActivity;
 import com.muhanzi.notify.activities.SplashScreen;
@@ -29,9 +32,11 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
+import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -269,6 +274,7 @@ public class NotificationService extends NotificationListenerService {
 
     private ArrayList<String> getBlockedApps() {
         ArrayList<String> apps = new ArrayList<>();
+        /*
         db.collection("users").document(firebaseUser.getUid())
                 .collection("blockedApps").get()
                 .addOnCompleteListener(task -> {
@@ -280,6 +286,20 @@ public class NotificationService extends NotificationListenerService {
                         Log.w(TAG, "Error getting documents.", task.getException());
                     }
                 });
+         */
+        //
+        db.collection("users").document(firebaseUser.getUid())
+                .collection("blockedApps").addSnapshotListener((snapshot, ex) -> {
+                    if (ex != null) {
+                        Log.w(TAG, "Listen failed.", ex);
+                        return;
+                    }
+
+                    for (QueryDocumentSnapshot doc : Objects.requireNonNull(snapshot)) {
+                        apps.add(doc.getString("packageName"));
+                    }
+                });
+        //
         return apps;
     }
 

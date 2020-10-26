@@ -42,8 +42,11 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.muhanzi.notify.services.MyService;
 import com.muhanzi.notify.services.NotificationService;
 import com.muhanzi.notify.broadcast_receivers.PhoneUnlockedBroadcastReceiver;
@@ -56,10 +59,12 @@ import com.google.firebase.auth.FirebaseUser;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -1429,6 +1434,7 @@ public class MainActivity extends AppCompatActivity {
 
     private ArrayList<String> getBlockedNumbers() {
         ArrayList<String> numbers = new ArrayList<>();
+        /*
         db.collection("users").document(firebaseUser.getUid())
                 .collection("blockedContacts").get()
                 .addOnCompleteListener(task -> {
@@ -1440,6 +1446,20 @@ public class MainActivity extends AppCompatActivity {
                         Log.w(TAG, "Error getting documents.", task.getException());
                     }
                 });
+         */
+        //
+        db.collection("users").document(firebaseUser.getUid())
+                .collection("blockedContacts").addSnapshotListener((snapshot, ex) -> {
+                    if (ex != null) {
+                        Log.w(TAG, "Listen failed.", ex);
+                        return;
+                    }
+
+                    for (QueryDocumentSnapshot doc : Objects.requireNonNull(snapshot)) {
+                        numbers.add(doc.getString("contactNumber"));
+                    }
+                });
+        //
         return numbers;
     }
 
