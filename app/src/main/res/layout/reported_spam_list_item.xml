@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.0"
+        app:cardCornerRadius="15dp"
+        android:background="@color/colorPrimary"
+        app:cardElevation="3dp"
+        android:layout_marginBottom="10dp">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="10dp">
+
+            <TextView
+                android:id="@+id/title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/notification_title"
+                app:layout_constraintEnd_toStartOf="@id/titleText"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toStartOf="@+id/spam"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/spam"
+                android:textColor="@color/colorPrimaryDark"
+                android:textSize="15sp"
+                android:fontFamily="sans-serif-medium"
+                android:padding="2dp" />
+
+            <TextView
+                android:id="@+id/titleText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/title"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toStartOf="@+id/spamText"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/spamText"
+                android:textColor="@android:color/black"
+                android:fontFamily="sans-serif-condensed"
+                android:padding="2dp" />
+
+            <TextView
+                android:id="@+id/spam"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/notification_text"
+                app:layout_constraintEnd_toStartOf="@id/spamText"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toStartOf="@+id/reported_on"
+                app:layout_constraintTop_toBottomOf="@id/title"
+                app:layout_constraintBottom_toTopOf="@id/reported_on"
+                android:textColor="@color/colorPrimaryDark"
+                android:textSize="15sp"
+                android:fontFamily="sans-serif-medium"
+                android:padding="2dp"
+                app:layout_constrainedHeight="true"/>
+
+            <TextView
+                android:id="@+id/spamText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="10dp"
+                android:maxHeight="200dp"
+                android:text="@string/notification"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toStartOf="@+id/dateTime"
+                app:layout_constraintTop_toBottomOf="@id/titleText"
+                app:layout_constraintBottom_toTopOf="@id/dateTime"
+                android:textColor="@android:color/black"
+                android:fontFamily="sans-serif-condensed"
+                android:padding="2dp" />
+
+            <TextView
+                android:id="@+id/reported_on"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/reported_on"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintEnd_toStartOf="@id/dateTime"
+                app:layout_constraintStart_toStartOf="@id/reported_from"
+                app:layout_constraintTop_toBottomOf="@id/spam"
+                app:layout_constraintBottom_toBottomOf="@id/reported_from"
+                android:textColor="@color/colorPrimaryDark"
+                android:textSize="15sp"
+                android:fontFamily="sans-serif-medium"
+                android:padding="2dp" />
+
+            <TextView
+                android:id="@+id/dateTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/not_set"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toStartOf="@+id/appName"
+                app:layout_constraintTop_toBottomOf="@id/spamText"
+                app:layout_constraintBottom_toBottomOf="@id/appName"
+                android:textColor="@android:color/black"
+                android:fontFamily="sans-serif-condensed"
+                android:padding="2dp" />
+
+            <TextView
+                android:id="@+id/reported_from"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/reported_from"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/appName"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/reported_on"
+                app:layout_constraintHorizontal_chainStyle="spread_inside"
+                android:textColor="@color/colorPrimaryDark"
+                android:textSize="15sp"
+                android:fontFamily="sans-serif-medium"
+                android:padding="2dp" />
+
+            <TextView
+                android:id="@+id/appName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/unknown_app"
+                app:layout_constraintEnd_toStartOf="@+id/appIcon"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toEndOf="@+id/reported_from"
+                app:layout_constraintTop_toBottomOf="@id/dateTime"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:textColor="@android:color/black"
+                android:fontFamily="sans-serif-condensed"
+                android:padding="2dp" />
+
+            <ImageView
+                android:id="@+id/appIcon"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                app:srcCompat="@drawable/android_icon"
+                android:contentDescription="@string/app_logo"
+                app:layout_constraintStart_toEndOf="@+id/appName"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/dateTime"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:padding="2dp" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.cardview.widget.CardView>
+</androidx.constraintlayout.widget.ConstraintLayout>

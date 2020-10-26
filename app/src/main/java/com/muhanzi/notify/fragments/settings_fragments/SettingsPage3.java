@@ -62,7 +62,7 @@ public class SettingsPage3 extends Fragment {
         });
         recyclerView = (RecyclerView) mainview.findViewById(R.id.dictionary_recyclerView);
         init();
-        getFriendList();
+        getDictionary();
         return mainview;
     }
 
@@ -72,7 +72,7 @@ public class SettingsPage3 extends Fragment {
         db = FirebaseFirestore.getInstance();
     }
 
-    private void getFriendList(){
+    private void getDictionary(){
         Query query = db.collection("users").document(firebaseUser.getUid()).collection("dictionary");
         FirestoreRecyclerOptions<Dictionary> firestoreRecyclerOptions = new FirestoreRecyclerOptions.Builder<Dictionary>()
                 .setQuery(query, Dictionary.class)

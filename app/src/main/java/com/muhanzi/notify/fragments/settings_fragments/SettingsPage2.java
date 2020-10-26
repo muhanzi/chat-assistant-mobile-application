@@ -106,7 +106,7 @@ public class SettingsPage2 extends Fragment {
                 return null;
             }
             Uri CONTACT_URI = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
-            CursorLoader cursorLoader = new CursorLoader(context, CONTACT_URI, null, null, null, null);
+            CursorLoader cursorLoader = new CursorLoader(context, CONTACT_URI, null, null, null, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME+" ASC");
             return cursorLoader;
         }
 
